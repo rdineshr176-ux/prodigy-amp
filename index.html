@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Prodigy Amp — Universal Cloud Music Streaming</title>
   <script src="https://cdn.tailwindcss.com/3.4.17" async></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" async></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,600;1,700&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@0,700;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
@@ -1334,8 +1333,14 @@
 
         <div>
           <label for="auth-password-input" class="block text-xs font-semibold mb-1">Password *</label>
-          <input id="auth-password-input" type="password" required placeholder="Minimum 6 characters"
-            class="w-full px-3.5 py-2.5 rounded-xl bg-black/30 border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+          <div class="relative">
+            <input id="auth-password-input" type="password" required placeholder="Minimum 6 characters"
+              class="w-full px-3.5 py-2.5 pr-16 rounded-xl bg-black/30 border border-[var(--border-subtle)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+            <button id="toggle-password-vis-btn" type="button"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded-lg text-[11px] font-mono-tech text-[var(--text-secondary)] hover:text-white bg-black/40 border border-[var(--border-subtle)]">
+              Show
+            </button>
+          </div>
         </div>
 
         <div id="auth-role-wrap" class="hidden">
@@ -1348,10 +1353,16 @@
 
         <div class="pt-2 flex items-center justify-between gap-2.5">
           <button id="supabase-signout-btn" type="button" class="px-3.5 py-2 rounded-xl border border-red-500/40 text-red-400 text-xs font-semibold hidden">Sign Out</button>
-          <div class="flex items-center gap-2 ml-auto">
+          <div class="flex items-center gap-2 ml-auto w-full sm:w-auto justify-end">
             <button id="cancel-auth-btn" type="button" class="px-4 py-2 rounded-xl border border-[var(--border-subtle)] text-xs font-semibold">Cancel</button>
-            <button id="auth-submit-btn" type="submit" class="crimson-pill px-5 py-2.5 rounded-xl text-xs font-bold">Log In</button>
+            <button id="auth-submit-btn" type="submit" class="crimson-pill px-6 py-2.5 rounded-xl text-xs font-bold flex-1 sm:flex-initial">Log In</button>
           </div>
+        </div>
+
+        <div class="pt-2 border-t border-[var(--border-subtle)] text-center">
+          <button id="auth-switch-mode-link" type="button" class="text-xs text-[var(--text-secondary)] hover:text-white">
+            Don't have an account yet? <span class="text-red-400 font-bold underline">Sign Up here</span>
+          </button>
         </div>
       </form>
     </div>
@@ -1497,14 +1508,30 @@
         volumeMute: '<svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>'
       };
 
-      // 2. INITIALIZE SUPABASE CLIENT (USING PUBLISHABLE KEY)
-      let sbClient = null;
-      function getSupabase() {
-        if (sbClient) return sbClient;
-        if (window.supabase && typeof window.supabase.createClient === "function") {
-          sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+      // 2. DIRECT SUPABASE AUTH REST ENGINE (SUPPORTS sb_publishable_ KEYS WITHOUT SENDING INVALID BEARER JWT HEADERS)
+      const PRODUCTION_NETLIFY_URL = "https://prodigy-amp.netlify.app";
+
+      async function supabaseAuthFetch(endpointPath, options) {
+        const opts = options || {};
+        const headers = {
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json"
+        };
+        // IMPORTANT: Never send sb_publishable_ in Authorization: Bearer (it is not a JWT).
+        // Only send Authorization: Bearer when we have an actual user JWT (eyJ...).
+        if (opts.userJwt && String(opts.userJwt).indexOf("eyJ") === 0) {
+          headers["Authorization"] = "Bearer " + opts.userJwt;
         }
-        return sbClient;
+        const res = await fetch(SUPABASE_URL + endpointPath, {
+          method: opts.method || "GET",
+          headers: headers,
+          body: opts.body ? JSON.stringify(opts.body) : undefined
+        });
+        let data = null;
+        try {
+          data = await res.json();
+        } catch (e) {}
+        return { ok: res.ok, status: res.status, data: data };
       }
 
       // Pure-JS deterministic salted credential hash (works on both HTTPS and HTTP LAN IPs like http://10.201.249.125:8000 where crypto.subtle is unavailable)
@@ -2994,7 +3021,7 @@
         switchView("songs");
       });
 
-      // 9. STRICT MANDATORY AUTHENTICATION SYSTEM (SUPABASE AUTH + CROSS-DEVICE CREDENTIAL VERIFICATION)
+      // 9. PRODUCTION AUTHENTICATION SYSTEM (DIRECT SUPABASE GOTRUE REST API + CLOUD SHEET USER REGISTRY)
       const authModal = document.getElementById("auth-modal");
       const tabLoginBtn = document.getElementById("auth-tab-login-btn");
       const tabSignupBtn = document.getElementById("auth-tab-signup-btn");
@@ -3003,12 +3030,27 @@
       const feedbackMsg = document.getElementById("auth-feedback-msg");
       const signOutBtn = document.getElementById("supabase-signout-btn");
       const headerSignOutBtn = document.getElementById("header-signout-btn");
+      const switchModeLink = document.getElementById("auth-switch-mode-link");
+      const togglePwVisBtn = document.getElementById("toggle-password-vis-btn");
       const mainWorkspace = document.querySelector("main");
       const footerBar = document.querySelector("footer");
 
+      if (togglePwVisBtn) {
+        togglePwVisBtn.addEventListener("click", function() {
+          const pwInput = document.getElementById("auth-password-input");
+          if (pwInput.type === "password") {
+            pwInput.type = "text";
+            togglePwVisBtn.textContent = "Hide";
+          } else {
+            pwInput.type = "password";
+            togglePwVisBtn.textContent = "Show";
+          }
+        });
+      }
+
       function showAuthFeedback(message, isSuccess) {
         feedbackMsg.textContent = message;
-        feedbackMsg.className = "text-xs font-mono-tech p-2.5 rounded-xl border " + (
+        feedbackMsg.className = "text-xs font-mono-tech p-3 rounded-xl border leading-relaxed " + (
           isSuccess
             ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30"
             : "text-red-400 bg-red-500/10 border-red-500/30"
@@ -3060,9 +3102,9 @@
         enforceMandatoryAuthGate();
       }
 
-      function setAuthTabMode(mode) {
+      function setAuthTabMode(mode, keepFeedback) {
         state.authMode = mode;
-        feedbackMsg.classList.add("hidden");
+        if (!keepFeedback) feedbackMsg.classList.add("hidden");
         if (mode === "login") {
           tabLoginBtn.classList.add("crimson-pill");
           tabLoginBtn.classList.remove("text-[var(--text-secondary)]");
@@ -3072,6 +3114,9 @@
           roleWrap.classList.add("hidden");
           document.getElementById("auth-form-subtitle").textContent = "Sign In with Your Registered Email & Password";
           document.getElementById("auth-submit-btn").textContent = "Log In";
+          if (switchModeLink) {
+            switchModeLink.innerHTML = 'Don\'t have an account yet? <span class="text-red-400 font-bold underline">Sign Up here</span>';
+          }
         } else {
           tabSignupBtn.classList.add("crimson-pill");
           tabSignupBtn.classList.remove("text-[var(--text-secondary)]");
@@ -3080,12 +3125,20 @@
           extraSignupFields.classList.remove("hidden");
           roleWrap.classList.remove("hidden");
           document.getElementById("auth-form-subtitle").textContent = "Create a New Verified Account (Minimum 6-char Password)";
-          document.getElementById("auth-submit-btn").textContent = "Sign Up";
+          document.getElementById("auth-submit-btn").textContent = "Create Account (Sign Up)";
+          if (switchModeLink) {
+            switchModeLink.innerHTML = 'Already have an account? <span class="text-red-400 font-bold underline">Log In here</span>';
+          }
         }
       }
 
-      tabLoginBtn.addEventListener("click", function() { setAuthTabMode("login"); });
-      tabSignupBtn.addEventListener("click", function() { setAuthTabMode("signup"); });
+      tabLoginBtn.addEventListener("click", function() { setAuthTabMode("login", false); });
+      tabSignupBtn.addEventListener("click", function() { setAuthTabMode("signup", false); });
+      if (switchModeLink) {
+        switchModeLink.addEventListener("click", function() {
+          setAuthTabMode(state.authMode === "login" ? "signup" : "login", false);
+        });
+      }
 
       document.getElementById("open-auth-modal-btn").addEventListener("click", function() {
         feedbackMsg.classList.add("hidden");
@@ -3099,7 +3152,7 @@
 
       function closeAuthModal() {
         if (!state.currentUser || !state.currentUser.email) {
-          showAuthFeedback("Authentication is mandatory to use Prodigy Amp. Please Log In or Sign Up above.", false);
+          showAuthFeedback("Authentication is mandatory to access Prodigy Amp. Please Log In or Sign Up above.", false);
           return;
         }
         authModal.classList.add("hidden");
@@ -3107,7 +3160,90 @@
       document.getElementById("close-auth-modal-btn").addEventListener("click", closeAuthModal);
       document.getElementById("cancel-auth-btn").addEventListener("click", closeAuthModal);
 
-      // Google OAuth Button: Uses real Supabase Google OAuth if enabled; otherwise prompts user for their @gmail.com credentials without fake bypass!
+      // Quick helper to ensure cloud users are synced before checking credentials
+      async function ensureCloudUsersSynced() {
+        try {
+          const res = await fetchWithTimeout(DRIVE_WEBHOOK_URL + "?action=catalog&t=" + Date.now(), 3800);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.tracks)) {
+            data.tracks.forEach(function(dt) {
+              const rawTitle = String(dt.title || "");
+              if (rawTitle.indexOf("__USER_AUTH__:") === 0) {
+                const emailKey = rawTitle.slice("__USER_AUTH__:".length).trim().toLowerCase();
+                if (emailKey) {
+                  state.registeredUsers[emailKey] = {
+                    email: emailKey,
+                    name: dt.artist || emailKey.split("@")[0],
+                    handle: dt.album || ("@" + emailKey.split("@")[0]),
+                    role: dt.genre || "Verified Listener",
+                    passHash: dt.uploaderEmail || ""
+                  };
+                }
+              }
+            });
+            persistRegisteredUsers();
+          }
+        } catch (e) {}
+      }
+
+      // Sync a newly registered or verified user account to the shared Google Sheet so they can log in from any device
+      async function pushUserRecordToCloud(userRecord) {
+        if (!userRecord || !userRecord.email) return;
+        const emailLower = userRecord.email.toLowerCase();
+        state.registeredUsers[emailLower] = userRecord;
+        persistRegisteredUsers();
+
+        try {
+          await fetchWithTimeout(DRIVE_WEBHOOK_URL, 4000);
+        } catch (e) {}
+
+        fetch(DRIVE_WEBHOOK_URL, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "uploadTrack",
+            title: "__USER_AUTH__:" + emailLower,
+            artist: userRecord.name || emailLower.split("@")[0],
+            album: userRecord.handle || ("@" + emailLower.split("@")[0]),
+            genre: userRecord.role || "Artist & Listener",
+            coverUrl: ".",
+            uploaderEmail: userRecord.passHash || "",
+            fileName: "user_auth.bin",
+            mimeType: "application/octet-stream",
+            base64Audio: "AA==",
+            uploaderName: "__SYS_CHUNK__",
+            uploaderHandle: "@__sys_chunk__"
+          })
+        }).catch(function() {});
+
+        fetch(DRIVE_WEBHOOK_URL, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "registerUser",
+            email: emailLower,
+            name: userRecord.name || emailLower.split("@")[0],
+            handle: userRecord.handle || ("@" + emailLower.split("@")[0]),
+            role: userRecord.role || "Artist & Listener"
+          })
+        }).catch(function() {});
+      }
+
+      function completeLoginSession(userRecord, toastMessage) {
+        state.currentUser = userRecord;
+        try {
+          localStorage.setItem("prodigy_amp_sb_user_v6", JSON.stringify(state.currentUser));
+        } catch (err) {}
+        syncUserChip();
+        authModal.classList.add("hidden");
+        showToast(toastMessage || ("Signed in as " + userRecord.name));
+      }
+
+      // Google OAuth Button: Uses real Supabase Google OAuth redirect to https://prodigy-amp.netlify.app if enabled in Supabase
       document.getElementById("google-quick-login-creator").addEventListener("click", async function() {
         feedbackMsg.classList.add("hidden");
         const googleBtn = document.getElementById("google-quick-login-creator");
@@ -3115,38 +3251,31 @@
         googleBtn.textContent = "Checking Supabase Google Provider...";
 
         try {
-          const settingsRes = await fetch(SUPABASE_URL + "/auth/v1/settings", {
-            headers: { "apikey": SUPABASE_PUBLISHABLE_KEY }
-          });
-          if (settingsRes.ok) {
-            const settings = await settingsRes.json();
-            if (settings && settings.external && settings.external.google === true) {
-              const sb = getSupabase();
-              if (sb) {
-                await sb.auth.signInWithOAuth({
-                  provider: "google",
-                  options: { redirectTo: window.location.href }
-                });
-                return;
-              }
-            }
+          const settingsResp = await supabaseAuthFetch("/auth/v1/settings", { method: "GET" });
+          if (settingsResp.ok && settingsResp.data && settingsResp.data.external && settingsResp.data.external.google === true) {
+            const redirectTarget = (window.location.protocol.indexOf("http") === 0)
+              ? (window.location.origin + window.location.pathname)
+              : PRODUCTION_NETLIFY_URL;
+            window.location.href = SUPABASE_URL + "/auth/v1/authorize?provider=google&redirect_to=" + encodeURIComponent(redirectTarget);
+            return;
           }
         } catch (e) {}
 
         googleBtn.innerHTML = origHTML;
         const emailInput = document.getElementById("auth-email-input");
-        const passInput = document.getElementById("auth-password-input");
         if (!emailInput.value.trim()) {
           emailInput.placeholder = "yourname@gmail.com";
         }
         emailInput.focus();
-        showAuthFeedback("Google OAuth redirect is currently disabled in your Supabase Dashboard (Authentication → Providers → Google). Please enter your @gmail.com address and password below to Sign Up or Log In.", false);
+        showAuthFeedback("Google OAuth redirect is currently turned off in your Supabase Dashboard (Authentication → Providers → Google). Please enter your @gmail.com address and password below to Sign Up or Log In.", false);
       });
 
       async function handleSignOut() {
-        const sb = getSupabase();
-        if (sb) {
-          try { await sb.auth.signOut(); } catch (e) {}
+        if (state.currentUser && state.currentUser.accessToken) {
+          supabaseAuthFetch("/auth/v1/logout", {
+            method: "POST",
+            userJwt: state.currentUser.accessToken
+          }).catch(function() {});
         }
         pauseCurrentTrack();
         state.currentUser = null;
@@ -3163,7 +3292,7 @@
       signOutBtn.addEventListener("click", handleSignOut);
       if (headerSignOutBtn) headerSignOutBtn.addEventListener("click", handleSignOut);
 
-      // Strict Email + Password Sign Up & Log In Handler
+      // Strict Production Email + Password Sign Up & Log In Handler
       document.getElementById("auth-signup-form").addEventListener("submit", async function(e) {
         e.preventDefault();
         feedbackMsg.classList.add("hidden");
@@ -3193,141 +3322,243 @@
 
         try {
           const inputHash = computeAuthHash(emailLower, password);
-          const sb = getSupabase();
+
+          // Ensure latest registered users from Cloud Registry are loaded
+          if (!state.registeredUsers[emailLower]) {
+            await ensureCloudUsersSynced();
+          }
 
           if (state.authMode === "signup") {
-            if (!nameInput || nameInput.length < 2) {
-              throw new Error("Please enter your Full Name / Artist Name (at least 2 characters) to sign up.");
-            }
-            if (state.registeredUsers[emailLower]) {
-              throw new Error("An account with this email already exists. Please switch to 'Log In' above.");
+            const finalName = nameInput || emailLower.split("@")[0];
+            if (nameInput && nameInput.length < 2) {
+              throw new Error("Please enter your Full Name or Artist Name (at least 2 characters).");
             }
 
-            let handle = handleInput || ("@" + nameInput.toLowerCase().replace(/[^a-z0-9]/g, ""));
+            // Check if already registered in synced registry
+            if (state.registeredUsers[emailLower]) {
+              if (state.registeredUsers[emailLower].passHash === inputHash) {
+                completeLoginSession(state.registeredUsers[emailLower], "Welcome back, " + state.registeredUsers[emailLower].name + "!");
+                return;
+              }
+              setAuthTabMode("login", true);
+              throw new Error("An account for " + emailLower + " already exists! Switched to 'Log In' — please enter your password and click Log In.");
+            }
+
+            let handle = handleInput || ("@" + finalName.toLowerCase().replace(/[^a-z0-9]/g, ""));
             if (!handle.startsWith("@")) handle = "@" + handle;
 
-            // Register in Supabase Auth using Publishable Key
-            if (sb) {
-              const { data, error } = await sb.auth.signUp({
-                email: emailLower,
-                password: password,
-                options: {
-                  data: { full_name: nameInput, username: handle, role: roleInput }
+            // Call Supabase GoTrue /auth/v1/signup directly with apikey: SUPABASE_PUBLISHABLE_KEY (NO invalid Bearer header!)
+            let sbAccessToken = "";
+            try {
+              const redirectTarget = (window.location.protocol.indexOf("http") === 0)
+                ? (window.location.origin + window.location.pathname)
+                : PRODUCTION_NETLIFY_URL;
+              const signupRes = await supabaseAuthFetch("/auth/v1/signup?redirect_to=" + encodeURIComponent(redirectTarget), {
+                method: "POST",
+                body: {
+                  email: emailLower,
+                  password: password,
+                  data: {
+                    full_name: finalName,
+                    username: handle,
+                    role: roleInput,
+                    pass_hash: inputHash
+                  }
                 }
               });
-              if (error) {
-                const msg = String(error.message || "").toLowerCase();
-                if (msg.indexOf("already registered") !== -1 || msg.indexOf("already exists") !== -1) {
-                  throw new Error("This email is already registered in Supabase. Please switch to 'Log In' and sign in with your password.");
+
+              if (signupRes.ok && signupRes.data) {
+                const sbUser = signupRes.data.user || signupRes.data;
+                if (sbUser && Array.isArray(sbUser.identities) && sbUser.identities.length === 0) {
+                  // User already exists in Supabase: verify if their password matches via /auth/v1/token!
+                  const checkLogin = await supabaseAuthFetch("/auth/v1/token?grant_type=password", {
+                    method: "POST",
+                    body: { email: emailLower, password: password }
+                  });
+                  const errCode = (checkLogin.data && (checkLogin.data.error_code || checkLogin.data.error)) || "";
+                  if (checkLogin.ok || errCode === "email_not_confirmed") {
+                    const existingUserRec = {
+                      name: finalName,
+                      handle: handle,
+                      email: emailLower,
+                      role: roleInput,
+                      passHash: inputHash,
+                      accessToken: (checkLogin.data && checkLogin.data.access_token) || ""
+                    };
+                    await pushUserRecordToCloud(existingUserRec);
+                    completeLoginSession(existingUserRec, "Signed in as " + finalName + " (" + emailLower + ")!");
+                    return;
+                  }
+                  setAuthTabMode("login", true);
+                  throw new Error("This email is already registered in Supabase. Switched to 'Log In' — please enter your password.");
                 }
-                if (msg.indexOf("rate limit") === -1) {
-                  throw new Error(error.message);
+                if (signupRes.data.access_token) {
+                  sbAccessToken = signupRes.data.access_token;
                 }
-              } else if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-                throw new Error("This email is already registered in Supabase. Please switch to 'Log In' and sign in with your password.");
+              } else if (signupRes.data) {
+                const errMsg = String(signupRes.data.msg || signupRes.data.error_description || signupRes.data.message || "");
+                const errCode = String(signupRes.data.error_code || "");
+                if (errCode === "user_already_exists" || errMsg.toLowerCase().indexOf("already registered") !== -1) {
+                  // Check if password is valid for existing Supabase user
+                  const checkLogin = await supabaseAuthFetch("/auth/v1/token?grant_type=password", {
+                    method: "POST",
+                    body: { email: emailLower, password: password }
+                  });
+                  const tokErrCode = (checkLogin.data && (checkLogin.data.error_code || checkLogin.data.error)) || "";
+                  if (checkLogin.ok || tokErrCode === "email_not_confirmed") {
+                    const existingUserRec = {
+                      name: finalName,
+                      handle: handle,
+                      email: emailLower,
+                      role: roleInput,
+                      passHash: inputHash,
+                      accessToken: (checkLogin.data && checkLogin.data.access_token) || ""
+                    };
+                    await pushUserRecordToCloud(existingUserRec);
+                    completeLoginSession(existingUserRec, "Signed in as " + finalName + " (" + emailLower + ")!");
+                    return;
+                  }
+                  setAuthTabMode("login", true);
+                  throw new Error("An account with this email already exists. Switched to 'Log In' — please enter your password.");
+                }
+                // Note: If Supabase free tier SMTP returns over_email_send_rate_limit (429), we still complete registration in our Cloud User Registry so users are never blocked!
+                if (signupRes.status !== 429 && errCode !== "over_email_send_rate_limit" && errMsg.toLowerCase().indexOf("rate limit") === -1) {
+                  if (errMsg && errMsg.toLowerCase().indexOf("invalid jwt") === -1) {
+                    throw new Error(errMsg);
+                  }
+                }
+              }
+            } catch (sbErr) {
+              if (sbErr && sbErr.message && (
+                sbErr.message.indexOf("already") !== -1 ||
+                sbErr.message.indexOf("Password") !== -1 ||
+                sbErr.message.indexOf("valid email") !== -1
+              )) {
+                throw sbErr;
               }
             }
 
             const newUserRecord = {
-              name: nameInput,
+              name: finalName,
               handle: handle,
               email: emailLower,
               role: roleInput,
-              passHash: inputHash
+              passHash: inputHash,
+              accessToken: sbAccessToken
             };
-            state.registeredUsers[emailLower] = newUserRecord;
-            persistRegisteredUsers();
-
-            // Sync registered user + password verification hash to Google Drive Registry so login works across Desktop & Mobile!
-            fetch(DRIVE_WEBHOOK_URL, {
-              method: "POST",
-              mode: "cors",
-              redirect: "follow",
-              headers: { "Content-Type": "text/plain;charset=utf-8" },
-              body: JSON.stringify({
-                action: "uploadTrack",
-                title: "__USER_AUTH__:" + emailLower,
-                artist: nameInput,
-                album: handle,
-                genre: roleInput,
-                coverUrl: ".",
-                uploaderEmail: inputHash,
-                fileName: "user_auth.bin",
-                mimeType: "application/octet-stream",
-                base64Audio: "AA==",
-                uploaderName: "__SYS_CHUNK__",
-                uploaderHandle: "@__sys_chunk__"
-              })
-            }).catch(function() {});
-
-            state.currentUser = newUserRecord;
-            try { localStorage.setItem("prodigy_amp_sb_user_v6", JSON.stringify(state.currentUser)); } catch (err) {}
-            syncUserChip();
-            closeAuthModal();
-            showToast("Account created & signed in as " + nameInput + " (" + emailLower + ")!");
+            await pushUserRecordToCloud(newUserRecord);
+            completeLoginSession(newUserRecord, "Account created & signed in as " + finalName + "!");
           } else {
-            // LOG IN MODE: Strictly validate email & password!
+            // LOG IN MODE: Strictly validate email & password against Cloud Registry + Direct Supabase GoTrue REST API
             const localOrCloudUser = state.registeredUsers[emailLower];
 
-            // 1. If we have a verified password hash for this user, verify it strictly
+            // 1. If user is in our verified registry, strictly verify their password hash
             if (localOrCloudUser && localOrCloudUser.passHash) {
               if (localOrCloudUser.passHash !== inputHash) {
                 throw new Error("Incorrect password for " + emailLower + ". Please enter the exact password you used when signing up.");
               }
-              // Password hash matched! Also attempt Supabase session sign-in
-              if (sb) {
-                try { await sb.auth.signInWithPassword({ email: emailLower, password: password }); } catch (eSb) {}
-              }
-              state.currentUser = localOrCloudUser;
-              try { localStorage.setItem("prodigy_amp_sb_user_v6", JSON.stringify(state.currentUser)); } catch (err) {}
-              syncUserChip();
-              closeAuthModal();
-              showToast("Welcome back, " + localOrCloudUser.name + "!");
+              // Password matched! Also grab Supabase token if available
+              try {
+                const tokRes = await supabaseAuthFetch("/auth/v1/token?grant_type=password", {
+                  method: "POST",
+                  body: { email: emailLower, password: password }
+                });
+                if (tokRes.ok && tokRes.data && tokRes.data.access_token) {
+                  localOrCloudUser.accessToken = tokRes.data.access_token;
+                }
+              } catch (eTok) {}
+              completeLoginSession(localOrCloudUser, "Welcome back, " + localOrCloudUser.name + "!");
               return;
             }
 
-            // 2. Otherwise validate against Supabase Auth signInWithPassword
-            if (sb) {
-              const { data, error } = await sb.auth.signInWithPassword({
-                email: emailLower,
-                password: password
-              });
-              if (error) {
-                const emsg = String(error.message || "");
-                if (emsg.toLowerCase().indexOf("invalid login credentials") !== -1) {
-                  throw new Error("Invalid email or password. If you haven't created an account yet, please switch to 'Sign Up' first.");
+            // 2. Otherwise verify directly against Supabase GoTrue /auth/v1/token?grant_type=password
+            let supabaseChecked = false;
+            try {
+              const tokenRes = await supabaseAuthFetch("/auth/v1/token?grant_type=password", {
+                method: "POST",
+                body: {
+                  email: emailLower,
+                  password: password
                 }
-                throw new Error(emsg);
-              }
-              if (data && data.user) {
-                const meta = data.user.user_metadata || {};
+              });
+              supabaseChecked = true;
+
+              const errCode = (tokenRes.data && (tokenRes.data.error_code || tokenRes.data.error)) || "";
+              const errMsg = (tokenRes.data && (tokenRes.data.msg || tokenRes.data.error_description || tokenRes.data.message)) || "";
+
+              // Note: Supabase GoTrue ONLY returns "email_not_confirmed" AFTER verifying that the user exists AND their bcrypt password is 100% correct!
+              if (tokenRes.ok || errCode === "email_not_confirmed" || errMsg.toLowerCase().indexOf("email not confirmed") !== -1) {
+                const sbUser = (tokenRes.data && tokenRes.data.user) || {};
+                const meta = sbUser.user_metadata || {};
                 const verifiedUser = {
                   name: meta.full_name || emailLower.split("@")[0],
                   handle: meta.username || ("@" + emailLower.split("@")[0].replace(/[^a-z0-9]/g, "")),
                   email: emailLower,
                   role: meta.role || "Verified Supabase User",
-                  passHash: inputHash
+                  passHash: inputHash,
+                  accessToken: (tokenRes.data && tokenRes.data.access_token) || ""
                 };
-                state.registeredUsers[emailLower] = verifiedUser;
-                persistRegisteredUsers();
-                state.currentUser = verifiedUser;
-                try { localStorage.setItem("prodigy_amp_sb_user_v6", JSON.stringify(state.currentUser)); } catch (err) {}
-                syncUserChip();
-                closeAuthModal();
-                showToast("Logged in via Supabase: " + emailLower);
+                await pushUserRecordToCloud(verifiedUser);
+                completeLoginSession(verifiedUser, "Logged in as " + verifiedUser.name + " (" + emailLower + ")!");
                 return;
+              }
+
+              if (errCode === "invalid_credentials" || errMsg.toLowerCase().indexOf("invalid login credentials") !== -1) {
+                throw new Error("Invalid email or password. If you haven't created an account yet, click 'Sign Up' above first.");
+              }
+              if (errMsg) {
+                throw new Error(errMsg);
+              }
+            } catch (tokErr) {
+              if (supabaseChecked && tokErr && tokErr.message) {
+                throw tokErr;
               }
             }
 
-            throw new Error("Account not found. Please switch to 'Sign Up' to create your account first.");
+            throw new Error("Account not found for " + emailLower + ". Please switch to 'Sign Up' above to create your account first.");
           }
         } catch (err) {
           showAuthFeedback(String(err.message || err), false);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = prevLabel;
+          submitBtn.textContent = state.authMode === "signup" ? "Create Account (Sign Up)" : "Log In";
         }
       });
+
+      // Handle Supabase OAuth / Email Confirmation URL hash callback (#access_token=...) on https://prodigy-amp.netlify.app
+      setTimeout(async function() {
+        const hash = window.location.hash || "";
+        if (hash.indexOf("access_token=") !== -1) {
+          const params = new URLSearchParams(hash.replace(/^#/, ""));
+          const accessToken = params.get("access_token");
+          if (accessToken) {
+            try {
+              const userRes = await supabaseAuthFetch("/auth/v1/user", {
+                method: "GET",
+                userJwt: accessToken
+              });
+              if (userRes.ok && userRes.data && userRes.data.email) {
+                const u = userRes.data;
+                const meta = u.user_metadata || {};
+                const dispName = meta.full_name || meta.name || u.email.split("@")[0];
+                const userRec = {
+                  name: dispName,
+                  handle: meta.username || ("@" + dispName.toLowerCase().replace(/[^a-z0-9]/g, "")),
+                  email: u.email.toLowerCase(),
+                  role: meta.role || "Verified Supabase User",
+                  passHash: meta.pass_hash || ("oauth_" + u.id),
+                  accessToken: accessToken
+                };
+                await pushUserRecordToCloud(userRec);
+                completeLoginSession(userRec, "Signed in via Supabase: " + u.email);
+                if (window.history && window.history.replaceState) {
+                  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+                }
+              }
+            } catch (e) {}
+          }
+        }
+      }, 200);
 
       // 10. INTERACTIVE PARTICLE & AUDIO-REACTIVE SPECTRUM ENGINE (60FPS)
       const particleCanvas = document.getElementById("particle-canvas");
