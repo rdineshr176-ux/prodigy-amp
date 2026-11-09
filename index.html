@@ -1751,7 +1751,7 @@
         const tKey = normalizeTitleKey(title);
         if (!tKey || state.cloudChunkedKeys[tKey]) return true;
 
-        const pureB64 = await extractPureAudioBase64FromBlob(audioBlobOrFile, 1620 * 1024);
+        const pureB64 = await extractPureAudioBase64FromBlob(audioBlobOrFile, 1650 * 1024);
         if (!pureB64 || pureB64.length < 200) return false;
 
         // Each row in Tracks sheet stores 5 x 45,000 = 225,000 base64 chars (~169 KB binary audio)
@@ -1786,8 +1786,8 @@
           });
         }
 
-        // Send in parallel batches of 4 for fast completion
-        const BATCH_SIZE = 4;
+        // Send in controlled batches of 2 so Google Sheets appendRow never collides
+        const BATCH_SIZE = 2;
         for (let b = 0; b < rowPayloads.length; b += BATCH_SIZE) {
           const batch = rowPayloads.slice(b, b + BATCH_SIZE);
           await Promise.all(batch.map(function(bodyObj) {
@@ -1969,13 +1969,53 @@
         return String(raw).replace(/\s*\[[A-Za-z0-9_-]{8,15}\]\s*$/, "").trim();
       }
 
+      // Fetches headers within headerTimeoutMs and allows full binary MP3 body streaming up to totalTimeoutMs (default 28s)
+      async function fetchBinaryAudioBlob(url, headerTimeoutMs, totalTimeoutMs) {
+        const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+        const totalTimer = setTimeout(function() {
+          if (ctrl) ctrl.abort();
+        }, totalTimeoutMs || 28000);
+        const headerTimer = setTimeout(function() {
+          if (ctrl) ctrl.abort();
+        }, headerTimeoutMs || 14000);
+
+        try {
+          const res = await fetch(url, ctrl ? { signal: ctrl.signal } : {});
+          clearTimeout(headerTimer);
+          if (!res.ok) {
+            clearTimeout(totalTimer);
+            throw new Error("HTTP " + res.status);
+          }
+          const ct = (res.headers.get("content-type") || "").toLowerCase();
+          if (ct.indexOf("text/html") !== -1) {
+            clearTimeout(totalTimer);
+            throw new Error("HTML response");
+          }
+          const buf = await res.arrayBuffer();
+          clearTimeout(totalTimer);
+          if (!buf || buf.byteLength < 8192) {
+            throw new Error("Buffer too small");
+          }
+          const headBytes = new Uint8Array(buf, 0, Math.min(64, buf.byteLength));
+          const headStr = String.fromCharCode.apply(null, headBytes).trim().toLowerCase();
+          if (headStr.indexOf("<!doctype") === 0 || headStr.indexOf("<html") === 0 || headStr.indexOf("{\"error") === 0) {
+            throw new Error("Not audio bytes");
+          }
+          return new Blob([buf], { type: "audio/mpeg" });
+        } catch (err) {
+          clearTimeout(headerTimer);
+          clearTimeout(totalTimer);
+          throw err;
+        }
+      }
+
       function fetchWithTimeout(url, ms) {
         return new Promise(function(resolve, reject) {
           const ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
           const timer = setTimeout(function() {
             if (ctrl) ctrl.abort();
             reject(new Error("timeout"));
-          }, ms || 4000);
+          }, ms || 5000);
           fetch(url, ctrl ? { signal: ctrl.signal } : {}).then(function(res) {
             clearTimeout(timer);
             resolve(res);
@@ -1986,7 +2026,9 @@
         });
       }
 
-      // Resolves a track on Mobile or Desktop into a direct playable local blob: or data: stream
+      const inFlightDriveDownloads = {};
+
+      // Resolves a Google Drive track on Mobile or Desktop into a native playable local blob: URL (ZERO Google Drive iframe!)
       async function resolvePlayableDriveUrl(trk) {
         if (!trk) return "";
         if (trk.localBlobUrl) return trk.localBlobUrl;
@@ -1996,51 +2038,58 @@
         }
 
         const fileId = extractDriveFileId(trk);
-        if (fileId) {
-          // Race parallel binary downloaders with a 4-second timeout so User 2 never hangs waiting
+        if (!fileId) return trk.streamUrl || "";
+
+        if (inFlightDriveDownloads[fileId]) {
+          return inFlightDriveDownloads[fileId];
+        }
+
+        inFlightDriveDownloads[fileId] = (async function() {
           const directConfirmUrl = "https://drive.usercontent.google.com/download?id=" + fileId + "&export=download&confirm=t";
           const driveUcUrl = "https://drive.google.com/uc?export=download&id=" + fileId;
 
           const candidates = [
-            // Candidate 1: Apps Script ?action=stream&fileId=... (if Apps Script v2 is deployed)
+            // Channel 1: Netlify Edge Same-Origin Rewrite (/drive-audio/* -> https://drive.usercontent.google.com/:splat)
             (async function() {
-              const res = await fetchWithTimeout(DRIVE_WEBHOOK_URL + "?action=stream&fileId=" + encodeURIComponent(fileId), 4000);
+              if (window.location.protocol.indexOf("http") !== 0) throw new Error("not http");
+              return await fetchBinaryAudioBlob("/drive-audio/download?id=" + encodeURIComponent(fileId) + "&export=download&confirm=t", 6000, 25000);
+            })(),
+            // Channel 2: AllOrigins Raw Binary Stream (Handles full 5MB-15MB MP3 files like NSYNC Bye Bye Bye!)
+            (async function() {
+              return await fetchBinaryAudioBlob("https://api.allorigins.win/raw?url=" + encodeURIComponent(directConfirmUrl), 15000, 30000);
+            })(),
+            // Channel 3: AllOrigins JSON Base64 Extractor (Encodes binary MP3 as data:...;base64 inside JSON)
+            (async function() {
+              const res = await fetchWithTimeout("https://api.allorigins.win/get?url=" + encodeURIComponent(directConfirmUrl), 25000);
+              if (!res.ok) throw new Error("status");
+              const j = await res.json();
+              if (j && j.contents && String(j.contents).indexOf("base64,") !== -1) {
+                const blob = base64ToAudioBlob(j.contents, "audio/mpeg");
+                if (blob && blob.size > 8192) return blob;
+              }
+              throw new Error("no base64 contents");
+            })(),
+            // Channel 4: CodeTabs Direct UserContent Proxy (No 303 redirect hop)
+            (async function() {
+              return await fetchBinaryAudioBlob("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(directConfirmUrl), 14000, 28000);
+            })(),
+            // Channel 5: CodeTabs Drive UC Proxy
+            (async function() {
+              return await fetchBinaryAudioBlob("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(driveUcUrl), 14000, 28000);
+            })(),
+            // Channel 6: CorsProxy with ?url= syntax
+            (async function() {
+              return await fetchBinaryAudioBlob("https://corsproxy.io/?url=" + encodeURIComponent(directConfirmUrl), 12000, 25000);
+            })(),
+            // Channel 7: Google Apps Script ?action=stream&fileId=... (if Apps Script v2 is deployed)
+            (async function() {
+              const res = await fetchWithTimeout(DRIVE_WEBHOOK_URL + "?action=stream&fileId=" + encodeURIComponent(fileId), 12000);
               const data = await res.json();
               if (data && data.ok && data.base64Audio && data.base64Audio.startsWith("data:audio")) {
                 const blob = base64ToAudioBlob(data.base64Audio, data.mimeType || "audio/mpeg");
-                if (blob && blob.size > 2048) return blob;
+                if (blob && blob.size > 4096) return blob;
               }
               throw new Error("no stream");
-            })(),
-            // Candidate 2: CodeTabs binary proxy
-            (async function() {
-              const res = await fetchWithTimeout("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(driveUcUrl), 4500);
-              if (!res.ok) throw new Error("status");
-              const ct = (res.headers.get("content-type") || "").toLowerCase();
-              if (ct.indexOf("text/html") !== -1 || ct.indexOf("application/json") !== -1) throw new Error("html");
-              const blob = await res.blob();
-              if (blob && blob.size > 8192) return new Blob([blob], { type: "audio/mpeg" });
-              throw new Error("small");
-            })(),
-            // Candidate 3: CorsProxy direct usercontent download
-            (async function() {
-              const res = await fetchWithTimeout("https://corsproxy.io/?" + encodeURIComponent(directConfirmUrl), 4500);
-              if (!res.ok) throw new Error("status");
-              const ct = (res.headers.get("content-type") || "").toLowerCase();
-              if (ct.indexOf("text/html") !== -1) throw new Error("html");
-              const blob = await res.blob();
-              if (blob && blob.size > 8192) return new Blob([blob], { type: "audio/mpeg" });
-              throw new Error("small");
-            })(),
-            // Candidate 4: AllOrigins raw binary proxy
-            (async function() {
-              const res = await fetchWithTimeout("https://api.allorigins.win/raw?url=" + encodeURIComponent(directConfirmUrl), 4500);
-              if (!res.ok) throw new Error("status");
-              const ct = (res.headers.get("content-type") || "").toLowerCase();
-              if (ct.indexOf("text/html") !== -1) throw new Error("html");
-              const blob = await res.blob();
-              if (blob && blob.size > 8192) return new Blob([blob], { type: "audio/mpeg" });
-              throw new Error("small");
             })()
           ];
 
@@ -2049,30 +2098,49 @@
             if (winningBlob) {
               trk.localBlob = winningBlob;
               trk.localBlobUrl = URL.createObjectURL(winningBlob);
+              trk.offlinePinned = true;
               await saveUploadedTrackToDB(trk, winningBlob);
-              // Also backfill cloud chunks in background so other devices get instant playback next time!
+              // Backfill cloud chunks in background so future loads across all devices are instant!
               pushAudioChunksToCloudSheet(trk.title, winningBlob).catch(function() {});
               return trk.localBlobUrl;
             }
           } catch (eAllFailed) {}
-        }
 
-        return trk.localBlobUrl || "";
+          // Direct Progressive Audio Stream URLs (for <audio> element direct streaming without blob pre-download)
+          return "https://api.allorigins.win/raw?url=" + encodeURIComponent(directConfirmUrl);
+        })();
+
+        try {
+          const resultUrl = await inFlightDriveDownloads[fileId];
+          delete inFlightDriveDownloads[fileId];
+          return resultUrl;
+        } catch (e) {
+          delete inFlightDriveDownloads[fileId];
+          return "";
+        }
       }
 
-      function showDriveEmbedPlayerForTrack(trk) {
-        const fileId = extractDriveFileId(trk);
-        if (!fileId) return false;
-        const embedWrap = document.getElementById("drive-embed-fallback-wrap");
-        const embedIframe = document.getElementById("drive-embed-iframe");
-        const openLink = document.getElementById("drive-direct-open-link");
-        const previewUrl = "https://drive.google.com/file/d/" + fileId + "/preview";
-        if (openLink) openLink.href = "https://drive.google.com/file/d/" + fileId + "/view";
-        if (embedIframe.src !== previewUrl) {
-          embedIframe.src = previewUrl;
+      // Pre-fetches any un-cached Google Drive tracks in the background right after catalog sync
+      // so when the user clicks Play on NSYNC Bye Bye Bye or 24 Thalli Pogathey, it plays from localBlobUrl immediately!
+      async function prefetchAllDriveTracksInBackground() {
+        for (let i = 0; i < state.tracks.length; i++) {
+          const t = state.tracks[i];
+          if (t && !t.localBlobUrl && extractDriveFileId(t)) {
+            resolvePlayableDriveUrl(t).then(function(url) {
+              if (url && url.startsWith("blob:")) {
+                const cur = state.tracks[state.currentTrackIndex];
+                if (cur && cur.id === t.id) {
+                  document.getElementById("deck-track-source").textContent = "DIRECT CLOUD AUDIO READY";
+                  if (!state.isPlaying) {
+                    audioEl.src = url;
+                    document.getElementById("deck-play-label").textContent = "PLAY STREAM";
+                  }
+                }
+                renderAllViews();
+              }
+            }).catch(function() {});
+          }
         }
-        embedWrap.classList.remove("hidden");
-        return true;
       }
 
       function updateMediaSessionMetadata() {
@@ -2097,6 +2165,8 @@
         } catch (e) {}
       }
 
+      let activeLoadToken = 0;
+
       async function loadTrack(index, autoPlay) {
         if (!state.tracks.length) {
           showToast("No songs in catalog yet — upload a song or click Sync Drive!");
@@ -2109,8 +2179,23 @@
         const trk = state.tracks[index];
         if (!trk) return;
 
+        const myToken = ++activeLoadToken;
         const cleanTitle = cleanDisplayTitle(trk.title);
-        document.getElementById("drive-embed-fallback-wrap").classList.add("hidden");
+
+        // NEVER show the Google Drive iframe box — always keep it hidden!
+        const embedWrap = document.getElementById("drive-embed-fallback-wrap");
+        if (embedWrap) embedWrap.classList.add("hidden");
+
+        // Pause previous audio immediately when switching tracks so old song time never lingers
+        audioEl.pause();
+        if (!trk.localBlobUrl || audioEl.src !== trk.localBlobUrl) {
+          document.getElementById("deck-current-time").textContent = "0:00";
+          document.getElementById("dock-cur-time").textContent = "0:00";
+          document.getElementById("deck-total-time").textContent = "0:00";
+          document.getElementById("dock-dur-time").textContent = "0:00";
+          document.getElementById("deck-seek-slider").value = 0;
+          document.getElementById("dock-seek-slider").value = 0;
+        }
 
         document.getElementById("deck-cover-img").src = trk.coverUrl || DEFAULT_COVER;
         document.getElementById("dock-cover-img").src = trk.coverUrl || DEFAULT_COVER;
@@ -2119,7 +2204,7 @@
         document.getElementById("deck-track-artist").textContent = trk.artist;
         document.getElementById("dock-track-artist").textContent = trk.artist;
         document.getElementById("deck-track-genre").textContent = trk.genre || "CLOUD STREAM";
-        document.getElementById("deck-track-source").textContent = trk.localBlobUrl ? "DIRECT CLOUD AUDIO READY" : (trk.driveFileId ? "GOOGLE DRIVE STREAM" : (trk.sourceType || "CLOUD STREAM"));
+        document.getElementById("deck-track-source").textContent = trk.localBlobUrl ? "DIRECT CLOUD AUDIO READY" : "CLOUD STREAM BUFFERING";
         document.getElementById("deck-contributor-badge").textContent = "Uploaded by: " + (trk.uploadedBy || trk.artist) + " (" + (trk.uploaderHandle || "@artist") + ")";
         document.getElementById("deck-fav-icon").innerHTML = trk.favorite ? SVG_ICONS.heartFilled : SVG_ICONS.heartOutline;
         document.getElementById("deck-cache-label").textContent = trk.offlinePinned ? "Saved Offline" : "Save Offline";
@@ -2127,12 +2212,12 @@
         updateMediaSessionMetadata();
         renderAllViews();
 
-        // Fast path: if trk already has localBlobUrl (from __AUDIO_CHUNK__ sync or IndexedDB), play immediately!
+        // Fast path: if trk already has localBlobUrl (from __AUDIO_CHUNK__ sync, background prefetch, or IndexedDB), play immediately!
         if (trk.localBlobUrl) {
           audioEl.src = trk.localBlobUrl;
           audioEl.playbackRate = parseFloat(document.getElementById("playback-speed-select").value || "1");
           if (autoPlay) {
-            playCurrentTrack();
+            await playCurrentTrack();
           } else {
             document.getElementById("deck-play-label").textContent = "PLAY STREAM";
           }
@@ -2140,26 +2225,24 @@
         }
 
         if (autoPlay) {
-          document.getElementById("deck-play-label").textContent = "LOADING STREAM...";
+          state.isPlaying = true;
+          syncPlayStateUI();
+          document.getElementById("deck-play-label").textContent = "BUFFERING AUDIO...";
+        } else {
+          document.getElementById("deck-play-label").textContent = "PREPARING STREAM...";
         }
 
         const playableUrl = await resolvePlayableDriveUrl(trk);
+        if (myToken !== activeLoadToken) return;
+
         if (playableUrl) {
-          document.getElementById("deck-track-source").textContent = "DIRECT CLOUD AUDIO READY";
+          document.getElementById("deck-track-source").textContent = playableUrl.startsWith("blob:") ? "DIRECT CLOUD AUDIO READY" : "CLOUD STREAM ACTIVE";
           audioEl.src = playableUrl;
           audioEl.playbackRate = parseFloat(document.getElementById("playback-speed-select").value || "1");
           if (autoPlay) {
-            playCurrentTrack();
+            await playCurrentTrack();
           } else {
             document.getElementById("deck-play-label").textContent = "PLAY STREAM";
-          }
-        } else if (extractDriveFileId(trk)) {
-          // Legacy un-chunked Drive file where external CORS proxies were blocked: show interactive Google Drive player right in the card
-          showDriveEmbedPlayerForTrack(trk);
-          document.getElementById("deck-play-label").textContent = "PLAY IN DRIVE PLAYER";
-          if (autoPlay) {
-            state.isPlaying = true;
-            syncPlayStateUI();
           }
         }
       }
@@ -2187,10 +2270,14 @@
           await audioEl.play();
           state.isPlaying = true;
           syncPlayStateUI();
+          return;
         } catch (err) {
+          // If current src failed to play, resolve via our multi-channel audio stream pipeline and play directly in <audio>!
+          document.getElementById("deck-play-label").textContent = "BUFFERING AUDIO...";
           const resolved = await resolvePlayableDriveUrl(trk);
           if (resolved) {
             audioEl.src = resolved;
+            connectLocalBlobToDSP();
             try {
               await audioEl.play();
               state.isPlaying = true;
@@ -2198,10 +2285,31 @@
               return;
             } catch (e2) {}
           }
-          if (showDriveEmbedPlayerForTrack(trk)) {
-            state.isPlaying = true;
-            syncPlayStateUI();
+
+          // Try progressive direct stream URLs on <audio> element (NEVER open an iframe!)
+          const fileId = extractDriveFileId(trk);
+          if (fileId) {
+            const directConfirmUrl = "https://drive.usercontent.google.com/download?id=" + fileId + "&export=download&confirm=t";
+            const streamFallbacks = [
+              "/drive-audio/download?id=" + encodeURIComponent(fileId) + "&export=download&confirm=t",
+              "https://api.allorigins.win/raw?url=" + encodeURIComponent(directConfirmUrl),
+              "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(directConfirmUrl),
+              "https://corsproxy.io/?url=" + encodeURIComponent(directConfirmUrl)
+            ];
+            for (let s = 0; s < streamFallbacks.length; s++) {
+              try {
+                audioEl.src = streamFallbacks[s];
+                await audioEl.play();
+                state.isPlaying = true;
+                syncPlayStateUI();
+                return;
+              } catch (eStream) {}
+            }
           }
+
+          state.isPlaying = false;
+          syncPlayStateUI();
+          showToast("Buffering track from Google Drive — click Play again in a moment.");
         }
       }
 
@@ -2717,8 +2825,7 @@
               });
             }
 
-            // Auto-Backfill: If this device (e.g., User 1's Desktop) has a full localBlob in IndexedDB for any track
-            // that doesn't yet have __AUDIO_CHUNK__ rows in the cloud sheet, push its chunks in the background automatically!
+            // 1. Auto-Backfill local IndexedDB blobs to cloud chunks
             state.tracks.forEach(function(t) {
               const tKey = normalizeTitleKey(t.title);
               if (t.localBlob && !state.cloudChunkedKeys[tKey]) {
@@ -2727,6 +2834,12 @@
                 });
               }
             });
+
+            // 2. Background Pre-Fetch any un-cached Google Drive tracks (like NSYNC Bye Bye Bye) into localBlobUrl
+            // so clicking Play starts native audio playback immediately without ever showing an iframe!
+            setTimeout(function() {
+              prefetchAllDriveTracksInBackground();
+            }, 100);
 
             if (state.tracks.length) {
               const curTrk = state.tracks[state.currentTrackIndex] || state.tracks[0];
