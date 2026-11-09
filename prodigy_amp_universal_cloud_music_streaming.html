@@ -569,6 +569,14 @@
             <span>Particles: <strong id="particle-mode-label" class="text-[var(--text-primary)]">Crimson Embers</strong></span>
           </button>
 
+          <button id="low-data-mode-btn" type="button" title="Toggle Low-Internet Turbo Saver Mode"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono-tech border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+            </svg>
+            <span id="low-data-mode-label">Low-Net Turbo: ON</span>
+          </button>
+
           <button id="lockscreen-status-btn" type="button" title="Mobile Screen-Off & Media Session Status"
             class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-mono-tech border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -952,15 +960,50 @@
         </div>
 
         <div class="lg:col-span-8 amp-card rounded-3xl p-5 sm:p-8 space-y-5">
-          <div class="flex items-center justify-between">
-            <h3 id="vault-view-heading" class="font-display font-bold text-xl sm:text-2xl">Active Play Queue</h3>
-            <button id="shuffle-queue-btn" type="button" class="px-4 py-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-xs font-mono-tech flex items-center gap-2">
-              <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
-              </svg>
-              <span>Shuffle Queue</span>
-            </button>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span id="vault-view-subtitle" class="text-[10px] font-mono-tech uppercase tracking-widest text-red-400">COLLECTION VIEW</span>
+              <h3 id="vault-view-heading" class="font-display font-bold text-xl sm:text-2xl">Active Play Queue</h3>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="play-active-playlist-btn" type="button" class="crimson-pill px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Play All</span>
+              </button>
+              <button id="shuffle-queue-btn" type="button" class="px-3.5 py-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-xs font-mono-tech flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
+                </svg>
+                <span>Shuffle</span>
+              </button>
+            </div>
           </div>
+
+          <!-- Custom Playlist Editor Bar (Shown when a custom playlist is selected) -->
+          <div id="custom-playlist-editor-bar" class="hidden p-4 rounded-2xl bg-black/30 border border-red-500/30 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                <input id="rename-playlist-input" type="text" placeholder="Rename playlist..."
+                  class="flex-1 px-3 py-1.5 rounded-xl bg-black/40 border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+                <button id="rename-playlist-btn" type="button" class="px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-semibold">
+                  Rename
+                </button>
+              </div>
+              <button id="delete-playlist-btn" type="button" class="px-3 py-1.5 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 text-xs font-semibold">
+                Delete Playlist
+              </button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-[var(--border-subtle)]">
+              <select id="playlist-add-song-select" class="flex-1 py-2 px-3 rounded-xl bg-black/40 border border-[var(--border-subtle)] text-xs">
+                <option value="">Select a song from library to add to this playlist...</option>
+              </select>
+              <button id="playlist-add-song-btn" type="button" class="crimson-pill px-4 py-2 rounded-xl text-xs font-bold">
+                + Add Song to Playlist
+              </button>
+            </div>
+          </div>
+
           <div id="vault-tracks-container" class="space-y-3"></div>
         </div>
       </div>
@@ -1276,6 +1319,73 @@
   </main>
 
   <!-- ================================================================== -->
+  <!-- PLAYLIST & SONG ALTER / DELETE STUDIO MODAL                        -->
+  <!-- ================================================================== -->
+  <div id="song-manage-modal" class="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4 hidden">
+    <div class="amp-card rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-5 border border-red-500/40 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[var(--border-subtle)] pb-3">
+        <div>
+          <span class="text-[10px] font-mono-tech uppercase tracking-widest text-red-400">PLAYLIST & SONG STUDIO</span>
+          <h3 id="song-manage-modal-title" class="font-display font-bold text-lg sm:text-xl mt-0.5 truncate">Manage Song & Playlists</h3>
+        </div>
+        <button id="close-song-manage-modal-btn" type="button" class="p-2 rounded-xl border border-[var(--border-subtle)] text-xs font-mono-tech">✕</button>
+      </div>
+
+      <!-- Section A: Add / Remove Song in Custom Playlists -->
+      <div class="space-y-2.5">
+        <label class="block text-xs font-mono-tech uppercase text-[var(--text-muted)]">1. Add or Remove in Your Playlists</label>
+        <div id="modal-playlists-toggle-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+        <div class="flex gap-2 pt-1">
+          <input id="modal-new-playlist-input" type="text" placeholder="Create new playlist & add this song..."
+            class="flex-1 px-3.5 py-2 rounded-xl bg-black/30 border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+          <button id="modal-create-playlist-btn" type="button" class="crimson-pill px-4 py-2 rounded-xl text-xs font-bold">+ Create & Add</button>
+        </div>
+      </div>
+
+      <!-- Section B: Alter / Edit Song Metadata (Title, Artist, Genre) -->
+      <div class="space-y-3 pt-3 border-t border-[var(--border-subtle)]">
+        <label class="block text-xs font-mono-tech uppercase text-[var(--text-muted)]">2. Alter Song Details (Title, Artist, Genre)</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="edit-song-title-input" class="block text-[11px] font-semibold mb-1">Song Title</label>
+            <input id="edit-song-title-input" type="text"
+              class="w-full px-3 py-2 rounded-xl bg-black/30 border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+          </div>
+          <div>
+            <label for="edit-song-artist-input" class="block text-[11px] font-semibold mb-1">Artist Name</label>
+            <input id="edit-song-artist-input" type="text"
+              class="w-full px-3 py-2 rounded-xl bg-black/30 border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-red-500" />
+          </div>
+        </div>
+        <div class="flex items-center justify-between gap-2.5">
+          <select id="edit-song-genre-select" class="text-xs font-mono-tech flex-1 py-2 px-3 rounded-xl bg-black/30 border border-[var(--border-subtle)]">
+            <option value="Cloud Upload">Cloud Upload</option>
+            <option value="Synthwave">Synthwave</option>
+            <option value="Cyber-Bass">Cyber-Bass</option>
+            <option value="Lo-Fi Vinyl">Lo-Fi Vinyl</option>
+            <option value="Pop / Indie">Pop / Indie</option>
+          </select>
+          <button id="save-song-edits-btn" type="button" class="crimson-pill px-4 py-2 rounded-xl text-xs font-bold">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Section C: Permanently Delete Song from Website & Cloud Catalog -->
+      <div class="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
+        <div class="text-xs text-[var(--text-secondary)]">
+          Remove this song from the website catalog and all playlists.
+        </div>
+        <button id="modal-delete-song-btn" type="button"
+          class="px-4 py-2 rounded-xl border border-red-500/50 bg-red-500/15 hover:bg-red-600 hover:text-white text-red-400 text-xs font-bold flex items-center gap-1.5 transition-all">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          <span id="modal-delete-song-label">Delete Song</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
   <!-- SUPABASE AUTHENTICATION MODAL (LOG IN / SIGN UP / GOOGLE OAUTH)    -->
   <!-- ================================================================== -->
   <div id="auth-modal" class="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4 hidden">
@@ -1585,7 +1695,12 @@
         customPlaylists: [],
         currentUser: null,
         registeredUsers: {},
-        cloudChunkedKeys: {}
+        cloudChunkedKeys: {},
+        deletedTrackKeys: {},
+        songEditsMap: {},
+        lowDataMode: true,
+        managingTrackIndex: -1,
+        deleteConfirmPending: false
       };
 
       try {
@@ -1601,7 +1716,18 @@
           }
         }
         const savedPlaylists = localStorage.getItem("prodigy_amp_playlists_v4");
-        if (savedPlaylists) state.customPlaylists = JSON.parse(savedPlaylists);
+        if (savedPlaylists) state.customPlaylists = JSON.parse(savedPlaylists) || [];
+        const savedDeleted = localStorage.getItem("prodigy_amp_deleted_keys_v9");
+        if (savedDeleted) state.deletedTrackKeys = JSON.parse(savedDeleted) || {};
+        const savedEdits = localStorage.getItem("prodigy_amp_song_edits_v9");
+        if (savedEdits) state.songEditsMap = JSON.parse(savedEdits) || {};
+        const savedCatalogCache = localStorage.getItem("prodigy_amp_catalog_cache_v9");
+        if (savedCatalogCache) {
+          const parsedCat = JSON.parse(savedCatalogCache) || [];
+          state.tracks = parsedCat.filter(function(t) {
+            return t && t.title && !state.deletedTrackKeys[normalizeTitleKey(t.title)];
+          });
+        }
         const savedContribs = localStorage.getItem("prodigy_amp_real_contributors");
         if (savedContribs) {
           state.contributors = (JSON.parse(savedContribs) || []).filter(function(c) {
@@ -1845,6 +1971,48 @@
             blob: audioBlob || null
           });
         } catch (err) {}
+      }
+
+      async function deleteTrackFromDB(trackId, titleKey) {
+        const db = await openVaultDB();
+        if (!db) return;
+        try {
+          const tx = db.transaction("uploadedTracks", "readwrite");
+          const store = tx.objectStore("uploadedTracks");
+          if (trackId) store.delete(trackId);
+          const req = store.getAll();
+          req.onsuccess = function() {
+            const items = req.result || [];
+            items.forEach(function(item) {
+              if (item && item.meta && normalizeTitleKey(item.meta.title) === titleKey) {
+                store.delete(item.id);
+              }
+            });
+          };
+        } catch (err) {}
+      }
+
+      function persistCatalogMetadataCache() {
+        try {
+          const slim = state.tracks.slice(0, 200).map(function(t) {
+            return {
+              id: t.id,
+              title: t.title,
+              artist: t.artist,
+              album: t.album,
+              genre: t.genre,
+              sourceType: t.sourceType,
+              driveFileId: t.driveFileId || "",
+              uploadedBy: t.uploadedBy,
+              uploaderHandle: t.uploaderHandle,
+              coverUrl: (t.coverUrl && t.coverUrl.length < 30000) ? t.coverUrl : "",
+              streamUrl: (t.streamUrl && t.streamUrl.startsWith("http")) ? t.streamUrl : "",
+              favorite: Boolean(t.favorite),
+              offlinePinned: Boolean(t.offlinePinned)
+            };
+          });
+          localStorage.setItem("prodigy_amp_catalog_cache_v9", JSON.stringify(slim));
+        } catch (e) {}
       }
 
       async function loadUploadedTracksFromDB() {
@@ -2123,10 +2291,15 @@
       // Pre-fetches any un-cached Google Drive tracks in the background right after catalog sync
       // so when the user clicks Play on NSYNC Bye Bye Bye or 24 Thalli Pogathey, it plays from localBlobUrl immediately!
       async function prefetchAllDriveTracksInBackground() {
-        for (let i = 0; i < state.tracks.length; i++) {
-          const t = state.tracks[i];
+        if (!state.tracks.length) return;
+        // On Low-Internet Turbo mode, only pre-fetch the active track so mobile bandwidth is never saturated!
+        const limit = state.lowDataMode ? Math.min(1, state.tracks.length) : Math.min(3, state.tracks.length);
+        for (let i = 0; i < limit; i++) {
+          const idx = (state.currentTrackIndex + i) % state.tracks.length;
+          const t = state.tracks[idx];
           if (t && !t.localBlobUrl && extractDriveFileId(t)) {
-            resolvePlayableDriveUrl(t).then(function(url) {
+            try {
+              const url = await resolvePlayableDriveUrl(t);
               if (url && url.startsWith("blob:")) {
                 const cur = state.tracks[state.currentTrackIndex];
                 if (cur && cur.id === t.id) {
@@ -2138,7 +2311,7 @@
                 }
                 renderAllViews();
               }
-            }).catch(function() {});
+            } catch (e) {}
           }
         }
       }
@@ -2395,31 +2568,60 @@
         }
       });
 
-      // 7. RENDER HOME, SONGS PAGE, PLAYLISTS & CREDITS (ZERO FAKE DATA)
+      // 7. RENDER HOME, SONGS PAGE, INTERACTIVE PLAYLIST STUDIO & FAST O(1) SEARCH
+      function applySavedSongEdits(trk) {
+        if (!trk) return trk;
+        const tKey = normalizeTitleKey(trk.origTitle || trk.title);
+        if (!trk.origTitle) trk.origTitle = trk.title;
+        const edit = state.songEditsMap[tKey] || state.songEditsMap[trk.id];
+        if (edit) {
+          if (edit.title) trk.title = edit.title;
+          if (edit.artist) trk.artist = edit.artist;
+          if (edit.genre) trk.genre = edit.genre;
+        }
+        trk._searchIndex = (
+          String(trk.title || "") + " " +
+          String(trk.artist || "") + " " +
+          String(trk.genre || "") + " " +
+          String(trk.uploadedBy || "") + " " +
+          String(trk.uploaderHandle || "")
+        ).toLowerCase();
+        return trk;
+      }
+
       function buildTrackCardHTML(trk, realIndex) {
+        applySavedSongEdits(trk);
         const isCurrent = realIndex === state.currentTrackIndex;
         const activeBorder = isCurrent ? "border-red-500/70 bg-red-500/10" : "";
         const dispTitle = cleanDisplayTitle(trk.title);
+        const readyBadge = trk.localBlobUrl
+          ? '<span class="text-[9px] font-mono-tech px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400">INSTANT</span>'
+          : '';
         return (
-          '<div class="amp-card rounded-2xl p-4 flex items-center justify-between gap-3.5 ' + activeBorder + '">' +
-            '<div class="flex items-center gap-3.5 min-w-0">' +
+          '<div class="amp-card rounded-2xl p-4 flex items-center justify-between gap-3 ' + activeBorder + '">' +
+            '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-[var(--border-subtle)]">' +
-                '<img src="' + (trk.coverUrl || DEFAULT_COVER) + '" alt="' + String(dispTitle).replace(/"/g, "") + '" class="w-full h-full object-cover" />' +
+                '<img src="' + (trk.coverUrl || DEFAULT_COVER) + '" loading="lazy" alt="' + String(dispTitle).replace(/"/g, "") + '" class="w-full h-full object-cover" />' +
               '</div>' +
-              '<div class="min-w-0 space-y-0.5">' +
-                '<div class="flex items-center gap-2">' +
+              '<div class="min-w-0 space-y-0.5 flex-1">' +
+                '<div class="flex flex-wrap items-center gap-1.5">' +
                   '<span class="text-[10px] font-mono-tech px-2 py-0.5 rounded bg-red-500/15 text-red-400">' + (trk.genre || "Cloud") + '</span>' +
+                  readyBadge +
                   '<span class="text-[10px] font-mono-tech text-[var(--text-muted)] truncate">by ' + (trk.uploadedBy || trk.artist) + '</span>' +
                 '</div>' +
                 '<p class="font-display font-bold text-sm truncate">' + dispTitle + '</p>' +
                 '<p class="text-xs text-[var(--text-secondary)] truncate">' + trk.artist + '</p>' +
               '</div>' +
             '</div>' +
-            '<div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">' +
-              '<button type="button" data-action="fav-track" data-index="' + realIndex + '" class="p-2.5 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40" title="Like Song">' +
+            '<div class="flex items-center gap-1.5 flex-shrink-0">' +
+              '<button type="button" data-action="manage-track" data-index="' + realIndex + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-mono-tech flex items-center gap-1" title="Add to Playlist / Alter / Delete Song">' +
+                '<svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
+                '<span class="hidden sm:inline text-[11px]">Playlist / Edit</span>' +
+              '</button>' +
+              '<button type="button" data-action="fav-track" data-index="' + realIndex + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40" title="Like Song">' +
                 (trk.favorite ? SVG_ICONS.heartFilled : SVG_ICONS.heartOutline) +
               '</button>' +
-              '<button type="button" data-action="play-track" data-index="' + realIndex + '" class="crimson-pill px-3.5 py-2.5 rounded-xl text-xs font-mono-tech font-bold flex items-center gap-1.5">' +
+              '<button type="button" data-action="play-track" data-index="' + realIndex + '" class="crimson-pill px-3 py-2 rounded-xl text-xs font-mono-tech font-bold flex items-center gap-1.5">' +
                 (isCurrent && state.isPlaying ? SVG_ICONS.pause + '<span>Pause</span>' : SVG_ICONS.play + '<span>Play</span>') +
               '</button>' +
             '</div>' +
@@ -2446,16 +2648,20 @@
 
       function renderTrackCatalog() {
         const grid = document.getElementById("track-catalog-grid");
+        const qTerms = state.searchQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
         let filtered = state.tracks.filter(function(t) {
+          applySavedSongEdits(t);
           const matchesGenre = state.activeGenreFilter === "all" ||
             t.genre === state.activeGenreFilter ||
             (state.activeGenreFilter === "Cloud Upload" && (t.driveFileId || (t.sourceType && t.sourceType.indexOf("Drive") !== -1)));
-          const q = state.searchQuery.trim().toLowerCase();
-          const matchesSearch = !q ||
-            String(t.title || "").toLowerCase().indexOf(q) !== -1 ||
-            String(t.artist || "").toLowerCase().indexOf(q) !== -1 ||
-            String(t.uploadedBy || "").toLowerCase().indexOf(q) !== -1;
-          return matchesGenre && matchesSearch;
+          if (!matchesGenre) return false;
+          if (!qTerms.length) return true;
+          const idxStr = t._searchIndex || "";
+          for (let k = 0; k < qTerms.length; k++) {
+            if (idxStr.indexOf(qTerms[k]) === -1) return false;
+          }
+          return true;
         });
 
         if (state.sortOrder === "title") {
@@ -2469,8 +2675,8 @@
         if (!filtered.length) {
           grid.innerHTML = (
             '<div class="amp-card rounded-2xl p-8 text-center space-y-3" style="grid-column: 1 / -1;">' +
-              '<p class="font-display font-bold text-lg">No Matching Songs in Library</p>' +
-              '<p class="text-xs text-[var(--text-secondary)]">Upload an MP3/WAV file in the Upload tab or click Refresh Drive Catalog to pull songs from Google Drive.</p>' +
+              '<p class="font-display font-bold text-lg">No Matching Songs Found</p>' +
+              '<p class="text-xs text-[var(--text-secondary)]">Try a different search keyword, clear your genre filter, or click Refresh Drive Catalog.</p>' +
             '</div>'
           );
           return;
@@ -2481,41 +2687,96 @@
         }).join("");
       }
 
+      function findTrackByIdOrTitleKey(refId) {
+        return state.tracks.find(function(t) {
+          return t.id === refId || normalizeTitleKey(t.origTitle || t.title) === refId || normalizeTitleKey(t.title) === refId;
+        });
+      }
+
+      function persistPlaylists() {
+        try {
+          localStorage.setItem("prodigy_amp_playlists_v4", JSON.stringify(state.customPlaylists));
+        } catch (e) {}
+      }
+
       function renderVaultView() {
         document.getElementById("vault-queue-count").textContent = String(state.tracks.length);
         document.getElementById("vault-fav-count").textContent = String(state.tracks.filter(function(t) { return t.favorite; }).length);
-        document.getElementById("vault-offline-count").textContent = String(state.tracks.filter(function(t) { return t.offlinePinned; }).length);
+        document.getElementById("vault-offline-count").textContent = String(state.tracks.filter(function(t) { return t.offlinePinned || t.localBlobUrl; }).length);
 
         const listEl = document.getElementById("vault-tracks-container");
+        const editorBar = document.getElementById("custom-playlist-editor-bar");
+        const addSongSelect = document.getElementById("playlist-add-song-select");
+
+        // Populate song selector dropdown for adding songs into a playlist
+        if (addSongSelect) {
+          addSongSelect.innerHTML = '<option value="">Select a song from library to add to this playlist...</option>' +
+            state.tracks.map(function(t) {
+              const tKey = normalizeTitleKey(t.origTitle || t.title);
+              return '<option value="' + tKey + '">' + cleanDisplayTitle(t.title) + ' — ' + t.artist + '</option>';
+            }).join("");
+        }
+
+        let activeCustomPl = null;
+        if (String(state.activeVaultTab).indexOf("playlist:") === 0) {
+          const plId = state.activeVaultTab.slice("playlist:".length);
+          activeCustomPl = state.customPlaylists.find(function(p) { return p.id === plId; }) || null;
+          if (!activeCustomPl) state.activeVaultTab = "queue";
+        }
+
         let list = state.tracks;
-        if (state.activeVaultTab === "favorites") {
-          list = state.tracks.filter(function(t) { return t.favorite; });
-          document.getElementById("vault-view-heading").textContent = "Liked Songs";
-        } else if (state.activeVaultTab === "offline") {
-          list = state.tracks.filter(function(t) { return t.offlinePinned; });
-          document.getElementById("vault-view-heading").textContent = "Offline Saved Vault";
+        if (activeCustomPl) {
+          editorBar.classList.remove("hidden");
+          document.getElementById("vault-view-subtitle").textContent = "CUSTOM USER PLAYLIST • " + activeCustomPl.trackIds.length + " SONG(S)";
+          document.getElementById("vault-view-heading").textContent = activeCustomPl.name;
+          const renameInput = document.getElementById("rename-playlist-input");
+          if (renameInput && document.activeElement !== renameInput) {
+            renameInput.value = activeCustomPl.name;
+          }
+          list = activeCustomPl.trackIds.map(function(ref) { return findTrackByIdOrTitleKey(ref); }).filter(Boolean);
         } else {
-          document.getElementById("vault-view-heading").textContent = "Active Play Queue";
+          editorBar.classList.add("hidden");
+          document.getElementById("vault-view-subtitle").textContent = "COLLECTION VIEW";
+          if (state.activeVaultTab === "favorites") {
+            list = state.tracks.filter(function(t) { return t.favorite; });
+            document.getElementById("vault-view-heading").textContent = "Liked Songs";
+          } else if (state.activeVaultTab === "offline") {
+            list = state.tracks.filter(function(t) { return t.offlinePinned || t.localBlobUrl; });
+            document.getElementById("vault-view-heading").textContent = "Offline Saved Vault (Zero Internet Required)";
+          } else {
+            document.getElementById("vault-view-heading").textContent = "Active Play Queue";
+          }
         }
 
         if (!list.length) {
-          listEl.innerHTML = '<div class="p-8 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center text-xs text-[var(--text-muted)]">No songs in this collection yet. Like or save any song from the Songs page to see it here.</div>';
+          listEl.innerHTML = activeCustomPl
+            ? '<div class="p-8 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center text-xs text-[var(--text-muted)]">This playlist has no songs yet. Use the dropdown above ("+ Add Song to Playlist") or click "+ Playlist / Edit" on any song card to add tracks!</div>'
+            : '<div class="p-8 rounded-2xl border border-dashed border-[var(--border-subtle)] text-center text-xs text-[var(--text-muted)]">No songs in this collection yet.</div>';
         } else {
-          listEl.innerHTML = list.map(function(trk) {
+          listEl.innerHTML = list.map(function(trk, posIdx) {
             const idx = state.tracks.indexOf(trk);
+            const playlistControls = activeCustomPl
+              ? (
+                '<button type="button" data-action="pl-move-up" data-pl-id="' + activeCustomPl.id + '" data-pos="' + posIdx + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-xs font-mono-tech" title="Move Song Up">↑</button>' +
+                '<button type="button" data-action="pl-move-down" data-pl-id="' + activeCustomPl.id + '" data-pos="' + posIdx + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-xs font-mono-tech" title="Move Song Down">↓</button>' +
+                '<button type="button" data-action="pl-remove-song" data-pl-id="' + activeCustomPl.id + '" data-pos="' + posIdx + '" class="px-2.5 py-1.5 rounded-xl border border-red-500/40 text-red-400 text-[11px] font-mono-tech" title="Remove from Playlist">Remove</button>'
+              )
+              : (
+                '<button type="button" data-action="manage-track" data-index="' + idx + '" class="px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-[11px] font-mono-tech">+ Playlist / Edit</button>'
+              );
+
             return (
-              '<div class="p-3.5 rounded-2xl bg-black/25 border border-[var(--border-subtle)] flex items-center justify-between gap-3.5">' +
-                '<div class="flex items-center gap-3 min-w-0">' +
-                  '<img src="' + (trk.coverUrl || DEFAULT_COVER) + '" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 border border-[var(--border-subtle)]" />' +
-                  '<div class="min-w-0">' +
+              '<div class="p-3.5 rounded-2xl bg-black/25 border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-3">' +
+                '<div class="flex items-center gap-3 min-w-0 flex-1">' +
+                  '<span class="text-xs font-mono-tech text-[var(--text-muted)] w-5 text-center">' + (posIdx + 1) + '</span>' +
+                  '<img src="' + (trk.coverUrl || DEFAULT_COVER) + '" loading="lazy" alt="" class="w-11 h-11 rounded-lg object-cover flex-shrink-0 border border-[var(--border-subtle)]" />' +
+                  '<div class="min-w-0 flex-1">' +
                     '<p class="font-bold text-sm truncate">' + cleanDisplayTitle(trk.title) + '</p>' +
-                    '<p class="text-xs text-[var(--text-secondary)] truncate">' + trk.artist + ' • Uploaded by ' + (trk.uploadedBy || trk.artist) + '</p>' +
+                    '<p class="text-xs text-[var(--text-secondary)] truncate">' + trk.artist + ' • ' + (trk.genre || "Cloud") + '</p>' +
                   '</div>' +
                 '</div>' +
-                '<div class="flex items-center gap-2 flex-shrink-0">' +
-                  '<button type="button" data-action="pin-track" data-index="' + idx + '" class="hidden sm:inline-flex px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] text-[11px] font-mono-tech">' +
-                    (trk.offlinePinned ? 'Saved Offline' : 'Save Offline') +
-                  '</button>' +
+                '<div class="flex items-center gap-1.5 flex-shrink-0">' +
+                  playlistControls +
                   '<button type="button" data-action="play-track" data-index="' + idx + '" class="crimson-pill px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5">' +
                     SVG_ICONS.play + '<span>Play</span>' +
                   '</button>' +
@@ -2527,14 +2788,16 @@
 
         const plContainer = document.getElementById("custom-playlists-list");
         if (!state.customPlaylists.length) {
-          plContainer.innerHTML = '<p class="text-xs text-[var(--text-muted)]">No custom playlists created yet.</p>';
+          plContainer.innerHTML = '<p class="text-xs text-[var(--text-muted)]">No custom playlists yet. Enter a name above and click <strong>+ Create</strong>.</p>';
         } else {
           plContainer.innerHTML = state.customPlaylists.map(function(pl) {
+            const isSelected = state.activeVaultTab === ("playlist:" + pl.id);
+            const activeCls = isSelected ? "border-red-500/60 bg-red-500/15 text-white" : "bg-black/20 border-[var(--border-subtle)] hover:border-red-500/40";
             return (
-              '<div class="px-3.5 py-2.5 rounded-xl bg-black/20 border border-[var(--border-subtle)] flex items-center justify-between text-xs">' +
-                '<span class="font-medium truncate">' + pl.name + '</span>' +
-                '<span class="font-mono-tech text-[10px] text-red-400">' + pl.trackIds.length + ' songs</span>' +
-              '</div>'
+              '<button type="button" data-action="select-custom-pl" data-pl-id="' + pl.id + '" class="w-full text-left px-3.5 py-2.5 rounded-xl border flex items-center justify-between text-xs transition-all ' + activeCls + '">' +
+                '<span class="font-semibold truncate">' + pl.name + '</span>' +
+                '<span class="font-mono-tech text-[10px] text-red-400">' + pl.trackIds.length + (pl.trackIds.length === 1 ? ' song' : ' songs') + '</span>' +
+              '</button>'
             );
           }).join("");
         }
@@ -2673,7 +2936,9 @@
         }
 
         try {
-          const res = await fetch(DRIVE_WEBHOOK_URL + "?action=sync&t=" + Date.now(), {
+          // Use fast ?action=catalog on initial startup (<300ms on low internet); use full ?action=sync when user clicks Sync Drive!
+          const actionParam = silent ? "catalog" : "sync";
+          const res = await fetch(DRIVE_WEBHOOK_URL + "?action=" + actionParam + "&t=" + Date.now(), {
             method: "GET",
             mode: "cors",
             redirect: "follow"
@@ -2687,6 +2952,14 @@
               data.tracks.forEach(function(dt) {
                 const rawTitle = String(dt.title || "");
                 if (!rawTitle) return;
+
+                if (rawTitle.indexOf("__DELETED_TRACK__:") === 0) {
+                  const delKey = rawTitle.slice("__DELETED_TRACK__:".length).split(":")[0].trim();
+                  if (delKey) {
+                    state.deletedTrackKeys[delKey] = true;
+                  }
+                  return;
+                }
 
                 if (rawTitle.indexOf("__USER_AUTH__:") === 0) {
                   const emailKey = rawTitle.slice("__USER_AUTH__:".length).trim().toLowerCase();
@@ -2723,7 +2996,11 @@
               // Second pass: process actual music tracks and attach reassembled audio blobs!
               data.tracks.forEach(function(dt) {
                 const rawTitle = String(dt.title || "");
-                if (!rawTitle || rawTitle.indexOf("__AUDIO_CHUNK__:") === 0 || rawTitle.indexOf("__USER_AUTH__:") === 0) {
+                if (!rawTitle || rawTitle.indexOf("__AUDIO_CHUNK__:") === 0 || rawTitle.indexOf("__USER_AUTH__:") === 0 || rawTitle.indexOf("__DELETED_TRACK__:") === 0) {
+                  return;
+                }
+                const checkDelKey = normalizeTitleKey(rawTitle);
+                if (state.deletedTrackKeys[checkDelKey]) {
                   return;
                 }
                 if (dt.uploadedBy === "__SYS_CHUNK__" || dt.uploaderHandle === "@__sys_chunk__") {
@@ -2824,6 +3101,15 @@
                 }
               });
             }
+
+            // Remove any locally cached tracks that were marked deleted in the cloud
+            try {
+              localStorage.setItem("prodigy_amp_deleted_keys_v9", JSON.stringify(state.deletedTrackKeys));
+            } catch (e) {}
+            state.tracks = state.tracks.filter(function(t) {
+              return t && t.title && !state.deletedTrackKeys[normalizeTitleKey(t.origTitle || t.title)];
+            });
+            persistCatalogMetadataCache();
 
             // 1. Auto-Backfill local IndexedDB blobs to cloud chunks
             state.tracks.forEach(function(t) {
@@ -4049,23 +4335,269 @@
         });
       });
 
+      const songManageModal = document.getElementById("song-manage-modal");
+
+      function openSongManageModal(trackIndex) {
+        const trk = state.tracks[trackIndex];
+        if (!trk) return;
+        state.managingTrackIndex = trackIndex;
+        state.deleteConfirmPending = false;
+        const delLabel = document.getElementById("modal-delete-song-label");
+        if (delLabel) delLabel.textContent = "Delete Song";
+
+        document.getElementById("song-manage-modal-title").textContent = cleanDisplayTitle(trk.title);
+        document.getElementById("edit-song-title-input").value = cleanDisplayTitle(trk.title);
+        document.getElementById("edit-song-artist-input").value = trk.artist || "";
+        document.getElementById("edit-song-genre-select").value = trk.genre || "Cloud Upload";
+
+        renderModalPlaylistsList();
+        songManageModal.classList.remove("hidden");
+      }
+
+      function renderModalPlaylistsList() {
+        const trk = state.tracks[state.managingTrackIndex];
+        if (!trk) return;
+        const tKey = normalizeTitleKey(trk.origTitle || trk.title);
+        const container = document.getElementById("modal-playlists-toggle-list");
+        if (!state.customPlaylists.length) {
+          container.innerHTML = '<p class="text-xs text-[var(--text-muted)]">No custom playlists yet — type a name below and click <strong>+ Create & Add</strong>.</p>';
+          return;
+        }
+        container.innerHTML = state.customPlaylists.map(function(pl) {
+          const inPl = pl.trackIds.indexOf(tKey) !== -1 || pl.trackIds.indexOf(trk.id) !== -1;
+          return (
+            '<div class="px-3.5 py-2 rounded-xl bg-black/30 border border-[var(--border-subtle)] flex items-center justify-between gap-2 text-xs">' +
+              '<span class="font-semibold truncate">' + pl.name + ' (' + pl.trackIds.length + ')</span>' +
+              '<button type="button" data-action="modal-toggle-pl-song" data-pl-id="' + pl.id + '" class="px-3 py-1 rounded-lg font-bold ' +
+                (inPl ? 'border border-red-500/40 text-red-400 bg-red-500/10' : 'crimson-pill') + '">' +
+                (inPl ? '✓ In Playlist (Remove)' : '+ Add to Playlist') +
+              '</button>' +
+            '</div>'
+          );
+        }).join("");
+      }
+
+      document.getElementById("close-song-manage-modal-btn").addEventListener("click", function() {
+        songManageModal.classList.add("hidden");
+      });
+
+      document.getElementById("modal-create-playlist-btn").addEventListener("click", function() {
+        const input = document.getElementById("modal-new-playlist-input");
+        const name = input.value.trim();
+        if (!name) return;
+        const trk = state.tracks[state.managingTrackIndex];
+        const tKey = trk ? normalizeTitleKey(trk.origTitle || trk.title) : "";
+        const newPl = {
+          id: "PL-" + Date.now(),
+          name: name,
+          trackIds: tKey ? [tKey] : []
+        };
+        state.customPlaylists.push(newPl);
+        persistPlaylists();
+        input.value = "";
+        renderModalPlaylistsList();
+        renderVaultView();
+        showToast("Created playlist '" + name + "' & added song!");
+      });
+
+      document.getElementById("save-song-edits-btn").addEventListener("click", function() {
+        const trk = state.tracks[state.managingTrackIndex];
+        if (!trk) return;
+        const newTitle = document.getElementById("edit-song-title-input").value.trim();
+        const newArtist = document.getElementById("edit-song-artist-input").value.trim();
+        const newGenre = document.getElementById("edit-song-genre-select").value;
+        if (!newTitle) {
+          showToast("Song title cannot be empty.");
+          return;
+        }
+        const tKey = normalizeTitleKey(trk.origTitle || trk.title);
+        if (!trk.origTitle) trk.origTitle = trk.title;
+        trk.title = newTitle;
+        if (newArtist) trk.artist = newArtist;
+        if (newGenre) trk.genre = newGenre;
+        state.songEditsMap[tKey] = { title: trk.title, artist: trk.artist, genre: trk.genre };
+        try {
+          localStorage.setItem("prodigy_amp_song_edits_v9", JSON.stringify(state.songEditsMap));
+        } catch (e) {}
+        persistCatalogMetadataCache();
+        if (state.managingTrackIndex === state.currentTrackIndex) {
+          document.getElementById("deck-track-title").textContent = cleanDisplayTitle(trk.title);
+          document.getElementById("dock-track-title").textContent = cleanDisplayTitle(trk.title);
+          document.getElementById("deck-track-artist").textContent = trk.artist;
+          document.getElementById("dock-track-artist").textContent = trk.artist;
+          document.getElementById("deck-track-genre").textContent = trk.genre;
+        }
+        renderAllViews();
+        songManageModal.classList.add("hidden");
+        showToast("Updated song details for '" + cleanDisplayTitle(newTitle) + "'!");
+      });
+
+      // Permanently Delete Song from Website & Cloud Registry (2-click safe confirmation inside modal)
+      document.getElementById("modal-delete-song-btn").addEventListener("click", async function() {
+        const trk = state.tracks[state.managingTrackIndex];
+        if (!trk) return;
+        const delLabel = document.getElementById("modal-delete-song-label");
+        if (!state.deleteConfirmPending) {
+          state.deleteConfirmPending = true;
+          delLabel.textContent = "Confirm Delete?";
+          return;
+        }
+
+        const removedTitle = cleanDisplayTitle(trk.title);
+        const tKey = normalizeTitleKey(trk.origTitle || trk.title);
+        state.deletedTrackKeys[tKey] = true;
+        try {
+          localStorage.setItem("prodigy_amp_deleted_keys_v9", JSON.stringify(state.deletedTrackKeys));
+        } catch (e) {}
+
+        // Remove from IndexedDB
+        await deleteTrackFromDB(trk.id, tKey);
+
+        // Remove from all custom playlists
+        state.customPlaylists.forEach(function(pl) {
+          pl.trackIds = pl.trackIds.filter(function(idOrKey) {
+            return idOrKey !== trk.id && idOrKey !== tKey;
+          });
+        });
+        persistPlaylists();
+
+        // Remove from state.tracks
+        const wasPlayingDeleted = (state.managingTrackIndex === state.currentTrackIndex);
+        state.tracks.splice(state.managingTrackIndex, 1);
+        persistCatalogMetadataCache();
+
+        if (wasPlayingDeleted) {
+          pauseCurrentTrack();
+          if (state.tracks.length) {
+            state.currentTrackIndex = 0;
+            loadTrack(0, false);
+          } else {
+            document.getElementById("deck-track-title").textContent = "Select or Upload a Song";
+            document.getElementById("dock-track-title").textContent = "Select or Upload a Song";
+          }
+        } else if (state.currentTrackIndex > state.managingTrackIndex) {
+          state.currentTrackIndex = Math.max(0, state.currentTrackIndex - 1);
+        }
+
+        // Push cloud deletion tombstone so all devices remove the deleted track on sync
+        fetch(DRIVE_WEBHOOK_URL, {
+          method: "POST",
+          mode: "cors",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "uploadTrack",
+            title: "__DELETED_TRACK__:" + tKey + ":" + Date.now(),
+            artist: ".",
+            album: ".",
+            genre: ".",
+            coverUrl: ".",
+            uploaderEmail: ".",
+            fileName: "del.bin",
+            mimeType: "application/octet-stream",
+            base64Audio: "AA==",
+            uploaderName: "__SYS_CHUNK__",
+            uploaderHandle: "@__sys_chunk__"
+          })
+        }).catch(function() {});
+
+        songManageModal.classList.add("hidden");
+        renderAllViews();
+        showToast("Deleted '" + removedTitle + "' from catalog & playlists.");
+      });
+
       document.getElementById("create-playlist-btn").addEventListener("click", function() {
         const input = document.getElementById("new-playlist-input");
         const name = input.value.trim();
-        if (!name) return;
-        const currentTrk = state.tracks[state.currentTrackIndex];
-        state.customPlaylists.push({
+        if (!name) {
+          showToast("Enter a playlist name first!");
+          return;
+        }
+        const newPl = {
           id: "PL-" + Date.now(),
           name: name,
-          trackIds: currentTrk ? [currentTrk.id] : []
-        });
-        try { localStorage.setItem("prodigy_amp_playlists_v4", JSON.stringify(state.customPlaylists)); } catch (e) {}
+          trackIds: []
+        };
+        state.customPlaylists.push(newPl);
+        state.activeVaultTab = "playlist:" + newPl.id;
+        persistPlaylists();
         input.value = "";
         renderVaultView();
-        showToast("Created playlist: " + name);
+        showToast("Created playlist '" + name + "' — use the dropdown on the right to add songs!");
+      });
+
+      document.getElementById("rename-playlist-btn").addEventListener("click", function() {
+        if (String(state.activeVaultTab).indexOf("playlist:") !== 0) return;
+        const plId = state.activeVaultTab.slice("playlist:".length);
+        const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+        const newName = document.getElementById("rename-playlist-input").value.trim();
+        if (!pl || !newName) return;
+        pl.name = newName;
+        persistPlaylists();
+        renderVaultView();
+        showToast("Renamed playlist to '" + newName + "'!");
+      });
+
+      document.getElementById("delete-playlist-btn").addEventListener("click", function() {
+        if (String(state.activeVaultTab).indexOf("playlist:") !== 0) return;
+        const plId = state.activeVaultTab.slice("playlist:".length);
+        const idx = state.customPlaylists.findIndex(function(p) { return p.id === plId; });
+        if (idx === -1) return;
+        const removedName = state.customPlaylists[idx].name;
+        state.customPlaylists.splice(idx, 1);
+        state.activeVaultTab = "queue";
+        persistPlaylists();
+        renderVaultView();
+        showToast("Deleted playlist '" + removedName + "'.");
+      });
+
+      document.getElementById("playlist-add-song-btn").addEventListener("click", function() {
+        if (String(state.activeVaultTab).indexOf("playlist:") !== 0) return;
+        const plId = state.activeVaultTab.slice("playlist:".length);
+        const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+        const sel = document.getElementById("playlist-add-song-select");
+        const tKey = sel ? sel.value : "";
+        if (!pl || !tKey) {
+          showToast("Select a song from the dropdown first!");
+          return;
+        }
+        if (pl.trackIds.indexOf(tKey) === -1) {
+          pl.trackIds.push(tKey);
+          persistPlaylists();
+          renderVaultView();
+          showToast("Added song to '" + pl.name + "'!");
+        } else {
+          showToast("That song is already in '" + pl.name + "'.");
+        }
+      });
+
+      document.getElementById("play-active-playlist-btn").addEventListener("click", function() {
+        if (String(state.activeVaultTab).indexOf("playlist:") === 0) {
+          const plId = state.activeVaultTab.slice("playlist:".length);
+          const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+          if (pl && pl.trackIds.length) {
+            const firstTrk = findTrackByIdOrTitleKey(pl.trackIds[0]);
+            if (firstTrk) {
+              loadTrack(state.tracks.indexOf(firstTrk), true);
+              return;
+            }
+          }
+        }
+        if (state.tracks.length) loadTrack(0, true);
       });
 
       document.getElementById("shuffle-queue-btn").addEventListener("click", function() {
+        if (String(state.activeVaultTab).indexOf("playlist:") === 0) {
+          const plId = state.activeVaultTab.slice("playlist:".length);
+          const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+          if (pl && pl.trackIds.length > 1) {
+            pl.trackIds.sort(function() { return Math.random() - 0.5; });
+            persistPlaylists();
+            renderVaultView();
+            showToast("Shuffled playlist '" + pl.name + "'!");
+            return;
+          }
+        }
         if (!state.tracks.length) return;
         state.tracks.sort(function() { return Math.random() - 0.5; });
         state.currentTrackIndex = 0;
@@ -4073,10 +4605,72 @@
         showToast("Play queue shuffled!");
       });
 
+      const lowDataBtn = document.getElementById("low-data-mode-btn");
+      if (lowDataBtn) {
+        lowDataBtn.addEventListener("click", function() {
+          state.lowDataMode = !state.lowDataMode;
+          document.getElementById("low-data-mode-label").textContent = "Low-Net Turbo: " + (state.lowDataMode ? "ON" : "OFF");
+          showToast(state.lowDataMode ? "Low-Internet Turbo Mode ON: Saves mobile data & pre-fetches only the active song." : "Low-Internet Turbo Mode OFF: Full background pre-fetching enabled.");
+        });
+      }
+
       document.body.addEventListener("click", function(e) {
         const btn = e.target.closest("[data-action]");
         if (!btn) return;
         const action = btn.getAttribute("data-action");
+
+        if (action === "select-custom-pl") {
+          const plId = btn.getAttribute("data-pl-id");
+          state.activeVaultTab = "playlist:" + plId;
+          document.querySelectorAll(".vault-tab-btn").forEach(function(b) {
+            b.classList.remove("border-red-500/40", "bg-red-500/10");
+          });
+          renderVaultView();
+          return;
+        }
+
+        if (action === "modal-toggle-pl-song") {
+          const plId = btn.getAttribute("data-pl-id");
+          const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+          const trk = state.tracks[state.managingTrackIndex];
+          if (!pl || !trk) return;
+          const tKey = normalizeTitleKey(trk.origTitle || trk.title);
+          const existingPos = pl.trackIds.indexOf(tKey) !== -1 ? pl.trackIds.indexOf(tKey) : pl.trackIds.indexOf(trk.id);
+          if (existingPos !== -1) {
+            pl.trackIds.splice(existingPos, 1);
+            showToast("Removed from '" + pl.name + "'.");
+          } else {
+            pl.trackIds.push(tKey);
+            showToast("Added to '" + pl.name + "'!");
+          }
+          persistPlaylists();
+          renderModalPlaylistsList();
+          renderVaultView();
+          return;
+        }
+
+        if (action === "pl-move-up" || action === "pl-move-down" || action === "pl-remove-song") {
+          const plId = btn.getAttribute("data-pl-id");
+          const pos = parseInt(btn.getAttribute("data-pos") || "0", 10);
+          const pl = state.customPlaylists.find(function(p) { return p.id === plId; });
+          if (!pl) return;
+          if (action === "pl-remove-song") {
+            pl.trackIds.splice(pos, 1);
+            showToast("Removed song from '" + pl.name + "'.");
+          } else if (action === "pl-move-up" && pos > 0) {
+            const tmp = pl.trackIds[pos - 1];
+            pl.trackIds[pos - 1] = pl.trackIds[pos];
+            pl.trackIds[pos] = tmp;
+          } else if (action === "pl-move-down" && pos < pl.trackIds.length - 1) {
+            const tmp2 = pl.trackIds[pos + 1];
+            pl.trackIds[pos + 1] = pl.trackIds[pos];
+            pl.trackIds[pos] = tmp2;
+          }
+          persistPlaylists();
+          renderVaultView();
+          return;
+        }
+
         const index = parseInt(btn.getAttribute("data-index") || "0", 10);
         if (!state.tracks[index]) return;
 
@@ -4086,11 +4680,15 @@
           } else {
             loadTrack(index, true);
           }
+        } else if (action === "manage-track") {
+          openSongManageModal(index);
         } else if (action === "fav-track") {
           state.tracks[index].favorite = !state.tracks[index].favorite;
+          persistCatalogMetadataCache();
           renderAllViews();
         } else if (action === "pin-track") {
           state.tracks[index].offlinePinned = !state.tracks[index].offlinePinned;
+          persistCatalogMetadataCache();
           renderVaultView();
           showToast(state.tracks[index].offlinePinned ? "Saved to Offline Vault" : "Removed from Offline Vault");
         }
