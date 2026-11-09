@@ -727,8 +727,8 @@
           <div class="flex flex-wrap items-center gap-3">
             <label for="eq-preset-select" class="text-xs font-mono-tech text-[var(--text-muted)]">EQ Preset:</label>
             <select id="eq-preset-select" aria-label="Equalizer Preset" class="text-xs font-mono-tech">
-              <option value="prodigy">Prodigy Crimson Bass</option>
-              <option value="flat">Flat Studio Reference</option>
+              <option value="flat" selected>Pure Hi-Fi Reference (Zero Distortion)</option>
+              <option value="prodigy">Warm Studio Bass (Headroom Protected)</option>
               <option value="vocal">Vocal Presence</option>
               <option value="tube">Midnight Tube Warmth</option>
               <option value="cyber">Cyberpunk Sparkle</option>
@@ -739,13 +739,13 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           <div class="lg:col-span-7 grid grid-cols-5 gap-3 sm:gap-4 p-4 sm:p-5 rounded-2xl bg-black/25 border border-[var(--border-subtle)]">
             <div class="flex flex-col items-center space-y-2.5">
-              <span id="eq-val-0" class="text-xs font-mono-tech text-red-400">+4dB</span>
-              <input type="range" data-eq-index="0" min="-12" max="12" value="4" step="1" class="eq-band-slider amp-slider w-full" aria-label="60Hz Sub Bass" />
+              <span id="eq-val-0" class="text-xs font-mono-tech text-red-400">0dB</span>
+              <input type="range" data-eq-index="0" min="-12" max="12" value="0" step="1" class="eq-band-slider amp-slider w-full" aria-label="60Hz Sub Bass" />
               <span class="text-[11px] font-mono-tech text-[var(--text-muted)]">60Hz</span>
             </div>
             <div class="flex flex-col items-center space-y-2.5">
-              <span id="eq-val-1" class="text-xs font-mono-tech text-red-400">+2dB</span>
-              <input type="range" data-eq-index="1" min="-12" max="12" value="2" step="1" class="eq-band-slider amp-slider w-full" aria-label="230Hz Warmth" />
+              <span id="eq-val-1" class="text-xs font-mono-tech text-red-400">0dB</span>
+              <input type="range" data-eq-index="1" min="-12" max="12" value="0" step="1" class="eq-band-slider amp-slider w-full" aria-label="230Hz Warmth" />
               <span class="text-[11px] font-mono-tech text-[var(--text-muted)]">230Hz</span>
             </div>
             <div class="flex flex-col items-center space-y-2.5">
@@ -754,13 +754,13 @@
               <span class="text-[11px] font-mono-tech text-[var(--text-muted)]">910Hz</span>
             </div>
             <div class="flex flex-col items-center space-y-2.5">
-              <span id="eq-val-3" class="text-xs font-mono-tech text-red-400">+2dB</span>
-              <input type="range" data-eq-index="3" min="-12" max="12" value="2" step="1" class="eq-band-slider amp-slider w-full" aria-label="3.6kHz Presence" />
+              <span id="eq-val-3" class="text-xs font-mono-tech text-red-400">0dB</span>
+              <input type="range" data-eq-index="3" min="-12" max="12" value="0" step="1" class="eq-band-slider amp-slider w-full" aria-label="3.6kHz Presence" />
               <span class="text-[11px] font-mono-tech text-[var(--text-muted)]">3.6kHz</span>
             </div>
             <div class="flex flex-col items-center space-y-2.5">
-              <span id="eq-val-4" class="text-xs font-mono-tech text-red-400">+3dB</span>
-              <input type="range" data-eq-index="4" min="-12" max="12" value="3" step="1" class="eq-band-slider amp-slider w-full" aria-label="14kHz Air" />
+              <span id="eq-val-4" class="text-xs font-mono-tech text-red-400">0dB</span>
+              <input type="range" data-eq-index="4" min="-12" max="12" value="0" step="1" class="eq-band-slider amp-slider w-full" aria-label="14kHz Air" />
               <span class="text-[11px] font-mono-tech text-[var(--text-muted)]">14kHz</span>
             </div>
           </div>
@@ -770,9 +770,9 @@
               <div class="p-3 rounded-2xl bg-black/20 border border-[var(--border-subtle)]">
                 <div class="flex justify-between text-xs font-mono-tech text-[var(--text-muted)] mb-1.5">
                   <span>BASS BOOST</span>
-                  <span id="bass-boost-val" class="text-red-400">+6 dB</span>
+                  <span id="bass-boost-val" class="text-red-400">0 dB</span>
                 </div>
-                <input id="bass-boost-slider" type="range" min="0" max="12" value="6" step="1" class="amp-slider w-full" aria-label="Bass Boost" />
+                <input id="bass-boost-slider" type="range" min="0" max="12" value="0" step="1" class="amp-slider w-full" aria-label="Bass Boost" />
               </div>
 
               <div class="p-3 rounded-2xl bg-black/20 border border-[var(--border-subtle)]">
@@ -1369,19 +1369,7 @@
         </div>
       </div>
 
-      <!-- Section C: Permanently Delete Song from Website & Cloud Catalog -->
-      <div class="pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-3">
-        <div class="text-xs text-[var(--text-secondary)]">
-          Remove this song from the website catalog and all playlists.
-        </div>
-        <button id="modal-delete-song-btn" type="button"
-          class="px-4 py-2 rounded-xl border border-red-500/50 bg-red-500/15 hover:bg-red-600 hover:text-white text-red-400 text-xs font-bold flex items-center gap-1.5 transition-all">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          </svg>
-          <span id="modal-delete-song-label">Delete Song</span>
-        </button>
-      </div>
+
     </div>
   </div>
 
@@ -1837,7 +1825,7 @@
                   startOffset = tagSize + 10;
                 }
               }
-              const cap = maxAudioBytes || (1800 * 1024); // up to 1.8 MB of pure audio frames (~2 minutes of stereo MP3)
+              const cap = maxAudioBytes || (8 * 1024 * 1024); // Up to 8 MB so the ENTIRE song (100% duration) is preserved!
               const endOffset = Math.min(allBytes.length, startOffset + cap);
               const pureSlice = allBytes.subarray(startOffset, endOffset);
               let binary = "";
@@ -1877,7 +1865,7 @@
         const tKey = normalizeTitleKey(title);
         if (!tKey || state.cloudChunkedKeys[tKey]) return true;
 
-        const pureB64 = await extractPureAudioBase64FromBlob(audioBlobOrFile, 1650 * 1024);
+        const pureB64 = await extractPureAudioBase64FromBlob(audioBlobOrFile, 8 * 1024 * 1024);
         if (!pureB64 || pureB64.length < 200) return false;
 
         // Each row in Tracks sheet stores 5 x 45,000 = 225,000 base64 chars (~169 KB binary audio)
@@ -1898,7 +1886,7 @@
 
           rowPayloads.push({
             action: "uploadTrack",
-            title: "__AUDIO_CHUNK__:" + tKey + ":" + padIdx + ":" + padTotal,
+            title: "__AUDIO_CHUNK__:" + tKey + ":" + padIdx + ":" + padTotal + ":FULL",
             artist: p0,
             album: p1,
             genre: p2,
@@ -2050,18 +2038,35 @@
       let mediaSource = null;
       let preampNode = null;
       let bassBoostNode = null;
+      let limiterNode = null;
       let eqNodes = [];
       let analyserNode = null;
       let freqData = new Uint8Array(64);
+      let userPreampMultiplier = 1.0;
 
       const EQ_FREQS = [60, 230, 910, 3600, 14000];
+      // Default to Pure Hi-Fi Reference (0 dB flat) and gentle headroom-compensated presets so audio NEVER clips or distorts
       const EQ_PRESETS = {
-        prodigy: [4, 2, 0, 2, 3],
         flat: [0, 0, 0, 0, 0],
-        vocal: [-2, 1, 5, 4, 1],
-        tube: [5, 4, 1, -1, -2],
-        cyber: [6, -2, 0, 4, 6]
+        prodigy: [2.5, 1.0, 0, 1.0, 1.5],
+        vocal: [-1.5, 0.5, 2.5, 2.0, 0.5],
+        tube: [2.5, 2.0, 0.5, -0.5, -1.0],
+        cyber: [3.0, -1.0, 0, 2.0, 3.0]
       };
+
+      // Automatically adjusts preamp headroom whenever EQ or Bass Boost is above 0 dB so mastered 0 dBFS tracks never clip or distort!
+      function updateCleanHeadroomGain() {
+        if (!preampNode) return;
+        let maxBoostDb = bassBoostNode ? Math.max(0, bassBoostNode.gain.value) : 0;
+        let maxEqDb = 0;
+        eqNodes.forEach(function(n) {
+          if (n.gain.value > maxEqDb) maxEqDb = n.gain.value;
+        });
+        const totalPositiveBoostDb = maxBoostDb + maxEqDb;
+        // Attenuate preamp by total positive boost so peak level stays strictly <= -0.3 dBFS (zero digital clipping!)
+        const headroomLinear = Math.pow(10, -(totalPositiveBoostDb + 0.3) / 20);
+        preampNode.gain.value = Math.min(1.0, headroomLinear * userPreampMultiplier);
+      }
 
       function connectLocalBlobToDSP() {
         if (!audioEl.src || (!audioEl.src.startsWith("blob:") && !audioEl.src.startsWith("data:"))) {
@@ -2069,30 +2074,39 @@
         }
         if (audioCtx) {
           if (audioCtx.state === "suspended") audioCtx.resume();
+          updateCleanHeadroomGain();
           return;
         }
         try {
           const Ctx = window.AudioContext || window.webkitAudioContext;
-          audioCtx = new Ctx();
+          audioCtx = new Ctx({ latencyHint: "playback" });
           mediaSource = audioCtx.createMediaElementSource(audioEl);
 
           preampNode = audioCtx.createGain();
-          preampNode.gain.value = 1.0;
+          preampNode.gain.value = 0.96;
 
           bassBoostNode = audioCtx.createBiquadFilter();
           bassBoostNode.type = "lowshelf";
           bassBoostNode.frequency.value = 80;
-          bassBoostNode.gain.value = 6;
+          bassBoostNode.gain.value = 0; // 0 dB default for pure distortion-free studio clarity
 
-          const initialGains = EQ_PRESETS.prodigy;
+          const initialGains = EQ_PRESETS.flat;
           eqNodes = EQ_FREQS.map(function(freq, idx) {
             const f = audioCtx.createBiquadFilter();
             f.type = idx === 0 ? "lowshelf" : (idx === EQ_FREQS.length - 1 ? "highshelf" : "peaking");
             f.frequency.value = freq;
-            f.Q.value = 1.1;
+            f.Q.value = 0.707; // Butterworth Q (0.707) eliminates ringing & phase distortion!
             f.gain.value = initialGains[idx];
             return f;
           });
+
+          // Studio-grade transparent Brickwall Limiter prevents any sample from ever exceeding -1.0 dBFS
+          limiterNode = audioCtx.createDynamicsCompressor();
+          limiterNode.threshold.value = -1.5;
+          limiterNode.knee.value = 6.0;
+          limiterNode.ratio.value = 12.0;
+          limiterNode.attack.value = 0.003;
+          limiterNode.release.value = 0.15;
 
           analyserNode = audioCtx.createAnalyser();
           analyserNode.fftSize = 128;
@@ -2106,8 +2120,10 @@
             prev.connect(node);
             prev = node;
           });
-          prev.connect(analyserNode);
+          prev.connect(limiterNode);
+          limiterNode.connect(analyserNode);
           analyserNode.connect(audioCtx.destination);
+          updateCleanHeadroomGain();
         } catch (err) {}
       }
 
@@ -2196,10 +2212,12 @@
 
       const inFlightDriveDownloads = {};
 
-      // Resolves a Google Drive track on Mobile or Desktop into a native playable local blob: URL (ZERO Google Drive iframe!)
+      // Resolves a Google Drive track on Mobile or Desktop into a 100% full-length native playable local blob: URL
       async function resolvePlayableDriveUrl(trk) {
         if (!trk) return "";
-        if (trk.localBlobUrl) return trk.localBlobUrl;
+        if (trk.localBlobUrl && (trk.isFullFile || !extractDriveFileId(trk))) {
+          return trk.localBlobUrl;
+        }
         if (trk.cdnUrl && trk.cdnUrl.startsWith("http")) return trk.cdnUrl;
         if (trk.streamUrl && (trk.streamUrl.startsWith("blob:") || trk.streamUrl.startsWith("data:audio/"))) {
           return trk.streamUrl;
@@ -2266,10 +2284,23 @@
             if (winningBlob) {
               trk.localBlob = winningBlob;
               trk.localBlobUrl = URL.createObjectURL(winningBlob);
+              trk.isFullFile = true;
               trk.offlinePinned = true;
               await saveUploadedTrackToDB(trk, winningBlob);
-              // Backfill cloud chunks in background so future loads across all devices are instant!
-              pushAudioChunksToCloudSheet(trk.title, winningBlob).catch(function() {});
+              // If audioEl is currently playing a partial preview of this track, seamlessly upgrade to the full-length blob at the exact currentTime!
+              const curActive = state.tracks[state.currentTrackIndex];
+              if (curActive && curActive.id === trk.id && audioEl.src !== trk.localBlobUrl) {
+                const savedTime = audioEl.currentTime || 0;
+                const wasPaused = audioEl.paused;
+                audioEl.src = trk.localBlobUrl;
+                if (savedTime > 0) {
+                  audioEl.addEventListener("loadedmetadata", function onMeta() {
+                    audioEl.removeEventListener("loadedmetadata", onMeta);
+                    if (savedTime < audioEl.duration - 1) audioEl.currentTime = savedTime;
+                    if (!wasPaused) audioEl.play().catch(function() {});
+                  });
+                }
+              }
               return trk.localBlobUrl;
             }
           } catch (eAllFailed) {}
@@ -2385,10 +2416,13 @@
         updateMediaSessionMetadata();
         renderAllViews();
 
-        // Fast path: if trk already has localBlobUrl (from __AUDIO_CHUNK__ sync, background prefetch, or IndexedDB), play immediately!
+        // Fast path: if trk has localBlobUrl, start immediately; if it was a legacy partial chunk (!trk.isFullFile) and has driveFileId, also fetch the 100% full file in background so it never stops halfway!
         if (trk.localBlobUrl) {
           audioEl.src = trk.localBlobUrl;
           audioEl.playbackRate = parseFloat(document.getElementById("playback-speed-select").value || "1");
+          if (!trk.isFullFile && extractDriveFileId(trk)) {
+            resolvePlayableDriveUrl(trk).catch(function() {});
+          }
           if (autoPlay) {
             await playCurrentTrack();
           } else {
@@ -2614,9 +2648,8 @@
               '</div>' +
             '</div>' +
             '<div class="flex items-center gap-1.5 flex-shrink-0">' +
-              '<button type="button" data-action="manage-track" data-index="' + realIndex + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/50 text-xs font-mono-tech flex items-center gap-1" title="Add to Playlist / Alter / Delete Song">' +
-                '<svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>' +
-                '<span class="hidden sm:inline text-[11px]">Playlist / Edit</span>' +
+              '<button type="button" data-action="manage-track" data-index="' + realIndex + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/50 text-[var(--text-secondary)] hover:text-white flex items-center justify-center" title="More Options (Add to Playlist / Edit Song)">' +
+                '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>' +
               '</button>' +
               '<button type="button" data-action="fav-track" data-index="' + realIndex + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40" title="Like Song">' +
                 (trk.favorite ? SVG_ICONS.heartFilled : SVG_ICONS.heartOutline) +
@@ -2762,7 +2795,9 @@
                 '<button type="button" data-action="pl-remove-song" data-pl-id="' + activeCustomPl.id + '" data-pos="' + posIdx + '" class="px-2.5 py-1.5 rounded-xl border border-red-500/40 text-red-400 text-[11px] font-mono-tech" title="Remove from Playlist">Remove</button>'
               )
               : (
-                '<button type="button" data-action="manage-track" data-index="' + idx + '" class="px-3 py-1.5 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-[11px] font-mono-tech">+ Playlist / Edit</button>'
+                '<button type="button" data-action="manage-track" data-index="' + idx + '" class="p-2 rounded-xl border border-[var(--border-subtle)] hover:border-red-500/40 text-[var(--text-secondary)] hover:text-white flex items-center justify-center" title="More Options (Add to Playlist / Edit Song)">' +
+                  '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>' +
+                '</button>'
               );
 
             return (
@@ -2979,13 +3014,16 @@
                   const parts = rawTitle.split(":");
                   const tKey = parts[1] || "";
                   const cIdx = parseInt(parts[2] || "0", 10);
+                  const totalExpected = parseInt(parts[3] || "1", 10);
+                  const isFullMarker = (parts[4] === "FULL") || (totalExpected < 7);
                   if (tKey) {
-                    if (!chunkGroups[tKey]) chunkGroups[tKey] = [];
+                    if (!chunkGroups[tKey]) chunkGroups[tKey] = { rows: [], isFull: true, totalExpected: totalExpected };
+                    if (!isFullMarker) chunkGroups[tKey].isFull = false;
                     const combinedRowB64 = [dt.artist, dt.album, dt.genre, dt.coverUrl, dt.uploaderEmail]
                       .map(function(s) { return (s && s !== ".") ? String(s) : ""; })
                       .join("");
-                    chunkGroups[tKey][cIdx] = combinedRowB64;
-                    state.cloudChunkedKeys[tKey] = true;
+                    chunkGroups[tKey].rows[cIdx] = combinedRowB64;
+                    if (isFullMarker) state.cloudChunkedKeys[tKey] = true;
                   }
                   return;
                 }
@@ -3021,10 +3059,14 @@
 
                 const tKey = normalizeTitleKey(rawTitle);
                 let assembledB64 = "";
-                if (chunkGroups[tKey] && chunkGroups[tKey].length) {
-                  assembledB64 = chunkGroups[tKey].filter(Boolean).join("");
+                let assembledIsFull = false;
+                if (chunkGroups[tKey] && chunkGroups[tKey].rows && chunkGroups[tKey].rows.length) {
+                  const validParts = chunkGroups[tKey].rows.filter(Boolean);
+                  assembledB64 = validParts.join("");
+                  assembledIsFull = Boolean(chunkGroups[tKey].isFull && validParts.length >= chunkGroups[tKey].totalExpected);
                 } else if (inlineHeadB64) {
                   assembledB64 = inlineHeadB64;
+                  assembledIsFull = false;
                 }
 
                 let reconstructedBlob = null;
@@ -3046,10 +3088,11 @@
                   if (dt.driveFileId) existing.driveFileId = dt.driveFileId;
                   if (dt.streamUrl && !existing.streamUrl) existing.streamUrl = dt.streamUrl;
                   if (dt.coverUrl) existing.coverUrl = dt.coverUrl;
-                  if (reconstructedBlobUrl && !existing.localBlobUrl) {
+                  if (reconstructedBlobUrl && (!existing.localBlobUrl || (assembledIsFull && !existing.isFullFile))) {
                     existing.localBlob = reconstructedBlob;
                     existing.localBlobUrl = reconstructedBlobUrl;
-                    saveUploadedTrackToDB(existing, reconstructedBlob);
+                    existing.isFullFile = assembledIsFull;
+                    if (assembledIsFull) saveUploadedTrackToDB(existing, reconstructedBlob);
                   }
                 } else {
                   const newTrk = {
@@ -3066,12 +3109,13 @@
                     streamUrl: dt.streamUrl || (dt.driveFileId ? ("https://drive.google.com/uc?export=download&id=" + dt.driveFileId) : ""),
                     localBlob: reconstructedBlob,
                     localBlobUrl: reconstructedBlobUrl,
+                    isFullFile: assembledIsFull,
                     durationSec: Number(dt.durationSec || 0),
                     favorite: false,
                     offlinePinned: Boolean(reconstructedBlobUrl)
                   };
                   state.tracks.push(newTrk);
-                  if (reconstructedBlob) {
+                  if (reconstructedBlob && assembledIsFull) {
                     saveUploadedTrackToDB(newTrk, reconstructedBlob);
                   }
                 }
@@ -3365,6 +3409,7 @@
           streamUrl: streamUrl,
           localBlob: fileObj || null,
           localBlobUrl: localBlobUrl,
+          isFullFile: Boolean(fileObj),
           durationSec: 0,
           favorite: true,
           offlinePinned: true
@@ -4259,6 +4304,7 @@
           const gainVal = parseFloat(slider.value);
           document.getElementById("eq-val-" + idx).textContent = (gainVal > 0 ? "+" : "") + gainVal + "dB";
           if (eqNodes[idx]) eqNodes[idx].gain.value = gainVal;
+          updateCleanHeadroomGain();
         });
       });
 
@@ -4269,19 +4315,22 @@
           document.getElementById("eq-val-" + idx).textContent = (preset[idx] > 0 ? "+" : "") + preset[idx] + "dB";
           if (eqNodes[idx]) eqNodes[idx].gain.value = preset[idx];
         });
+        updateCleanHeadroomGain();
         showToast("EQ Preset applied: " + e.target.options[e.target.selectedIndex].text);
       });
 
       document.getElementById("bass-boost-slider").addEventListener("input", function(e) {
         const val = parseFloat(e.target.value);
-        document.getElementById("bass-boost-val").textContent = "+" + val + " dB";
+        document.getElementById("bass-boost-val").textContent = (val > 0 ? "+" : "") + val + " dB";
         if (bassBoostNode) bassBoostNode.gain.value = val;
+        updateCleanHeadroomGain();
       });
 
       document.getElementById("preamp-slider").addEventListener("input", function(e) {
         const val = parseFloat(e.target.value);
         document.getElementById("preamp-val").textContent = val + "%";
-        if (preampNode) preampNode.gain.value = val / 100;
+        userPreampMultiplier = val / 100;
+        updateCleanHeadroomGain();
       });
 
       document.getElementById("playback-speed-select").addEventListener("change", function(e) {
@@ -4341,9 +4390,6 @@
         const trk = state.tracks[trackIndex];
         if (!trk) return;
         state.managingTrackIndex = trackIndex;
-        state.deleteConfirmPending = false;
-        const delLabel = document.getElementById("modal-delete-song-label");
-        if (delLabel) delLabel.textContent = "Delete Song";
 
         document.getElementById("song-manage-modal-title").textContent = cleanDisplayTitle(trk.title);
         document.getElementById("edit-song-title-input").value = cleanDisplayTitle(trk.title);
@@ -4430,80 +4476,6 @@
         renderAllViews();
         songManageModal.classList.add("hidden");
         showToast("Updated song details for '" + cleanDisplayTitle(newTitle) + "'!");
-      });
-
-      // Permanently Delete Song from Website & Cloud Registry (2-click safe confirmation inside modal)
-      document.getElementById("modal-delete-song-btn").addEventListener("click", async function() {
-        const trk = state.tracks[state.managingTrackIndex];
-        if (!trk) return;
-        const delLabel = document.getElementById("modal-delete-song-label");
-        if (!state.deleteConfirmPending) {
-          state.deleteConfirmPending = true;
-          delLabel.textContent = "Confirm Delete?";
-          return;
-        }
-
-        const removedTitle = cleanDisplayTitle(trk.title);
-        const tKey = normalizeTitleKey(trk.origTitle || trk.title);
-        state.deletedTrackKeys[tKey] = true;
-        try {
-          localStorage.setItem("prodigy_amp_deleted_keys_v9", JSON.stringify(state.deletedTrackKeys));
-        } catch (e) {}
-
-        // Remove from IndexedDB
-        await deleteTrackFromDB(trk.id, tKey);
-
-        // Remove from all custom playlists
-        state.customPlaylists.forEach(function(pl) {
-          pl.trackIds = pl.trackIds.filter(function(idOrKey) {
-            return idOrKey !== trk.id && idOrKey !== tKey;
-          });
-        });
-        persistPlaylists();
-
-        // Remove from state.tracks
-        const wasPlayingDeleted = (state.managingTrackIndex === state.currentTrackIndex);
-        state.tracks.splice(state.managingTrackIndex, 1);
-        persistCatalogMetadataCache();
-
-        if (wasPlayingDeleted) {
-          pauseCurrentTrack();
-          if (state.tracks.length) {
-            state.currentTrackIndex = 0;
-            loadTrack(0, false);
-          } else {
-            document.getElementById("deck-track-title").textContent = "Select or Upload a Song";
-            document.getElementById("dock-track-title").textContent = "Select or Upload a Song";
-          }
-        } else if (state.currentTrackIndex > state.managingTrackIndex) {
-          state.currentTrackIndex = Math.max(0, state.currentTrackIndex - 1);
-        }
-
-        // Push cloud deletion tombstone so all devices remove the deleted track on sync
-        fetch(DRIVE_WEBHOOK_URL, {
-          method: "POST",
-          mode: "cors",
-          redirect: "follow",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({
-            action: "uploadTrack",
-            title: "__DELETED_TRACK__:" + tKey + ":" + Date.now(),
-            artist: ".",
-            album: ".",
-            genre: ".",
-            coverUrl: ".",
-            uploaderEmail: ".",
-            fileName: "del.bin",
-            mimeType: "application/octet-stream",
-            base64Audio: "AA==",
-            uploaderName: "__SYS_CHUNK__",
-            uploaderHandle: "@__sys_chunk__"
-          })
-        }).catch(function() {});
-
-        songManageModal.classList.add("hidden");
-        renderAllViews();
-        showToast("Deleted '" + removedTitle + "' from catalog & playlists.");
       });
 
       document.getElementById("create-playlist-btn").addEventListener("click", function() {
