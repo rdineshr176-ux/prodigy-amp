@@ -1,0 +1,19 @@
+# Netlify Configuration for Prodigy Amp (https://prodigy-amp.netlify.app)
+# Proxies Google Drive audio downloads on the same origin (/drive-audio/*)
+# so Chrome & Mobile browsers stream any Google Drive audio file natively in <audio>
+# with zero Cross-Origin-Resource-Policy blocks and zero iframe players.
+
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/drive-audio/*"
+  to = "https://drive.usercontent.google.com/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/drive-audio/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cross-Origin-Resource-Policy = "cross-origin"
